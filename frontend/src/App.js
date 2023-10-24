@@ -283,9 +283,6 @@ function App() {
     }  
   }
 
-  function cst() {
-    
-  }
   return (
     <>
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -308,9 +305,7 @@ function App() {
                   </a>
                   <ul className="dropdown-menu">
                     <li><a className="dropdown-item" role="button" onClick={errores}>Errores</a></li>
-                    <li><a className="dropdown-item" role="button" onClick={ts}>Tabla de Símbolos</a></li>
-                    <li><a className="dropdown-item" role="button" onClick={cst}>CST</a></li>
-                    
+                    <li><a className="dropdown-item" role="button" onClick={ts}>Tabla de Símbolos</a></li>                    
                   </ul>
                 </li>
                 <li>
@@ -361,7 +356,7 @@ function App() {
           theme="vs-dark" />
     </form>
     <form id="formConsola">
-        <label htmlFor="Salida" className="form-label titulos" > Consola </label>
+        <label htmlFor="Salida" className="form-label titulos" > Salida </label>
         <textarea className=" form-control" id="consola" wrap="off" readOnly> </textarea>
         <div style={{marginBottom: '15px'}}></div>
     </form>
