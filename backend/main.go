@@ -222,69 +222,33 @@ func (v *Visitor) VisitDeclaracion(ctx *parser.DeclaracionContext, ts Scope, gen
 }
 
 func (v *Visitor) VisitDeclaracionTipoValor(ctx *parser.DeclaracionTipoValorContext, ts Scope, generador *Generador) interface{} {
-	/* 	expr := v.Visit(ctx.Expr(), ts, generador).(Valor) // Obtiene el valor de la expresión y su tipo
-	   	constante := true
-	   	if ctx.LET() == nil {
-	   		constante = false
-	   	}
-	   	var tipo int // Variable para almacenar el tipo de la variable
-	   	switch ctx.Tipo().GetText() {
-	   	case "String":
-	   		tipo = String
-	   	case "Bool":
-	   		tipo = Bool
-	   	case "Character":
-	   		tipo = Character
-	   	case "Int":
-	   		tipo = Int
-	   	case "Float":
-	   		tipo = Float
-	   	}
-
-	   	if ctx.Tipo().Tipo() != nil && reflect.TypeOf(expr.Valor).Kind() == reflect.Slice {
-	   		valores := make([]interface{}, len(expr.Valor.([]interface{})))
-	   		copy(valores, expr.Valor.([]interface{}))
-	   		fmt.Println("******************************TIPO DEL VECTOR DECLARADO COMO VARIABLE***************************\n", tipo)
-	   		var tipo int // Variable para almacenar el tipo de la variable
-	   		switch ctx.Tipo().Tipo().GetText() {
-	   		case "String":
-	   			tipo = String
-	   		case "Bool":
-	   			tipo = Bool
-	   		case "Character":
-	   			tipo = Character
-	   		case "Int":
-	   			tipo = Int
-	   		case "Float":
-	   			tipo = Float
-	   		}
-	   		//return ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, valores, false, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
-	   	}
-
-	   	if tipo == expr.Tipo {
-	   		//return ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, expr.Valor, constante, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope
-
-	   	} else if tipo == Float && expr.Tipo == Int {
-	   		//return ts.agregarVariable(Variable{ctx.ID().GetText(), Float, float64(expr.Valor.(int)), constante, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope de tipo float
-	   	} else if tipo == Character && expr.Tipo == String && len(expr.Valor.(string)) == 1 {
-	   		//return ts.agregarVariable(Variable{ctx.ID().GetText(), Character, expr.Valor, constante, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope de tipo Character
-	   	}
-	   	listaErrores = append(listaErrores, Error_{
-	   		Tipo:    "SEMANTICO",
-	   		Linea:   "",
-	   		Columna: "",
-	   		Mensaje: fmt.Sprintf("El valor de la expresión '%v' no coincide con el tipo de la variable '%v', no se puede crear.\n", expr.Valor, ctx.ID().GetText()),
-	   	})
-	   	//return Valor{Valor: fmt.Sprintf("Error: El valor de la expresión '%v' no coincide con el tipo de la variable '%v', no se puede crear.\n", expr.Valor, ctx.ID().GetText()), Tipo: Error}
-	*/return nil
-}
-
-func (v *Visitor) VisitDeclaracionTipo(ctx *parser.DeclaracionTipoContext, ts Scope, generador *Generador) interface{} {
-
-	/* fmt.Println("LET: ", ctx.LET())
+	expr := v.Visit(ctx.Expr(), ts, generador).(Valor) // Obtiene el valor de la expresión y su tipo
+	constante := true
+	heap := true
 	if ctx.LET() == nil {
+		constante = false
+	}
+	var tipo int // Variable para almacenar el tipo de la variable
+	switch ctx.Tipo().GetText() {
+	case "String":
+		tipo = String
+		heap = true
+	case "Bool":
+		tipo = Bool
+	case "Character":
+		tipo = Character
+	case "Int":
+		tipo = Int
+	case "Float":
+		tipo = Float
+	}
+
+	/* 	if ctx.Tipo().Tipo() != nil && reflect.TypeOf(expr.Valor).Kind() == reflect.Slice {
+		valores := make([]interface{}, len(expr.Valor.([]interface{})))
+		copy(valores, expr.Valor.([]interface{}))
+		fmt.Println("******************************TIPO DEL VECTOR DECLARADO COMO VARIABLE***************************\n", tipo)
 		var tipo int // Variable para almacenar el tipo de la variable
-		switch ctx.Tipo().GetText() {
+		switch ctx.Tipo().Tipo().GetText() {
 		case "String":
 			tipo = String
 		case "Bool":
@@ -296,102 +260,216 @@ func (v *Visitor) VisitDeclaracionTipo(ctx *parser.DeclaracionTipoContext, ts Sc
 		case "Float":
 			tipo = Float
 		}
-		//return ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, "nil", false, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope con valor nil
+		//return ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, valores, false, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+	} */
+	var pos int
+	if tipo == expr.Tipo {
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, expr.Valor, constante, 0, heap, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope
+	} else if tipo == Float && expr.Tipo == Int {
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), Float, expr.Valor, constante, 0, false, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope de tipo float
+	} else if tipo == Character && expr.Tipo == String && len(expr.Valor.(string)) == 1 {
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), Character, expr.Valor, constante, 0, false, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope de tipo Character
+	} else {
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+			Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+			Mensaje: fmt.Sprintf("El valor de la expresión '%v' no coincide con el tipo de la variable '%v', no se puede crear.\n", expr.Valor, ctx.ID().GetText()),
+		})
+		return Valor{}
 	}
-	listaErrores = append(listaErrores, Error_{
-		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
-		Mensaje: fmt.Sprintf("No se puede declarar la constante '%v' sin valor\n", ctx.ID().GetText()),
-	}) */
-	return Valor{Valor: fmt.Sprintf("Error: No se puede declarar la constante '%v' sin valor\n", ctx.ID().GetText()), Tipo: Error}
+	if pos == -1 {
+		generador.Comentario("Error: La variable ya existe")
+		return Valor{}
+	}
+	generador.Comentario("Declaración de variable: " + ctx.ID().GetText())
+	generador.setStack(fmt.Sprint(pos), fmt.Sprint(expr.Valor))
+	generador.agregarCodigo("\n")
+	return Valor{}
+}
+
+func (v *Visitor) VisitDeclaracionTipo(ctx *parser.DeclaracionTipoContext, ts Scope, generador *Generador) interface{} {
+	var pos int
+	heap := false
+	if ctx.LET() == nil {
+		var tipo int // Variable para almacenar el tipo de la variable
+		switch ctx.Tipo().GetText() {
+		case "String":
+			tipo = String
+			heap = true
+		case "Bool":
+			tipo = Bool
+		case "Character":
+			tipo = Character
+		case "Int":
+			tipo = Int
+		case "Float":
+			tipo = Float
+		}
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, "nil", false, 0, heap, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope con valor nil
+		if pos == -1 {
+			generador.Comentario("Error: La variable ya existe")
+			return Valor{}
+		}
+		generador.Comentario("Declaración de variable: " + ctx.ID().GetText())
+		generador.setStack(fmt.Sprint(pos), fmt.Sprint(999999999))
+		generador.agregarCodigo("\n")
+		return Valor{}
+	} else {
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+			Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+			Mensaje: fmt.Sprintf("No se puede declarar la constante '%v' sin valor\n", ctx.ID().GetText()),
+		})
+		return Valor{}
+	}
 }
 
 func (v *Visitor) VisitDeclaracionValor(ctx *parser.DeclaracionValorContext, ts Scope, generador *Generador) interface{} {
-	/* expr := v.Visit(ctx.Expr(), ts, generador).(Valor) // Obtiene el valor de la expresión y su tipo
+	expr := v.Visit(ctx.Expr(), ts, generador).(Valor) // Obtiene el valor de la expresión y su tipo
+	var pos int
+	heap := false
 	if expr.Tipo != Error {
 		constante := true
 		if ctx.LET() == nil {
 			constante = false
 		}
-		return ts.agregarVariable(Variable{ctx.ID().GetText(), expr.Tipo, expr.Valor, constante, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+		if expr.Tipo == String {
+			heap = true
+		}
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), expr.Tipo, expr.Valor, constante, 0, heap, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+		generador.Comentario("Declaración de variable: " + ctx.ID().GetText())
+		generador.setStack(fmt.Sprint(pos), fmt.Sprint(expr.Valor))
+		generador.agregarCodigo("\n")
+		return Valor{}
+	} else {
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+			Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+			Mensaje: fmt.Sprintf("No se puede declarar la variable '%v'\n       > %v\n", ctx.ID().GetText(), expr.Valor.(string)),
+		})
+		return Valor{}
 	}
-	listaErrores = append(listaErrores, Error_{
-		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
-		Mensaje: fmt.Sprintf("No se puede declarar la variable '%v'\n       > %v\n", ctx.ID().GetText(), expr.Valor.(string)),
-	})
-	return Valor{Valor: fmt.Sprintf("Error: No se puede declarar la variable '%v'\n       > %v\n", ctx.ID().GetText(), expr.Valor.(string)), Tipo: Error} */
-	return nil
 }
 
 func (v *Visitor) VisitAsignacion(ctx *parser.AsignacionContext, ts Scope, generador *Generador) interface{} {
-	/* expr := v.Visit(ctx.Expr(), ts, generador).(Valor) // Obtiene el valor de la expresión y su tipo
+	expr := v.Visit(ctx.Expr(), ts, generador).(Valor) // Obtiene el valor de la expresión y su tipo
 	mas := ctx.MAS()
-	menos := ctx.MENOS()
-	variable := ts.encontrarVariable(ctx.ID().GetText()).(Variable)
-	var res interface{}
-	if mas != nil {
-		if variable.Tipo != Error {
-			if variable.Tipo == String && expr.Tipo == String {
-				res = fmt.Sprintf("%v%v", variable.Valor, expr.Valor)
-			} else if variable.Tipo == Int && expr.Tipo == Int {
-				res = variable.Valor.(int) + expr.Valor.(int)
-			} else if variable.Tipo == Float && expr.Tipo == Float {
-				res = variable.Valor.(float64) + expr.Valor.(float64)
-			} else if variable.Tipo == Float && expr.Tipo == Int {
-				res = variable.Valor.(float64) + float64(expr.Valor.(int))
-				expr.Tipo = Float
-			} else if variable.Tipo == Int && expr.Tipo == Float {
-				res = float64(variable.Valor.(int)) + expr.Valor.(float64)
-				expr.Tipo = Float
+	//menos := ctx.MENOS()
+	variable := ts.encontrarVariable(ctx.ID().GetText(), ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn())
+	if variable != nil {
+		var res Valor
+		temp := generador.nuevoTemporal()
+		if mas != nil {
+			if variable.(Variable).Tipo == String && expr.Tipo == String {
+				generador.Comentario("Concatenación de Strings")
+				generador.Expresion(temp, "H", "", "") //Se almacena el inicio de la nueva cadena
+
+				//Primer Palabra
+				generador.Comentario("Primera Palabra")
+				ciclo := generador.nuevaEtiqueta()
+				salida := generador.nuevaEtiqueta()
+				caracter := generador.nuevoTemporal()
+
+				generador.imprimirEtiqueta(ciclo)
+				generador.getHeap(caracter, fmt.Sprint(variable.(Variable).Valor))
+				generador.If(caracter, "==", "-1", salida)
+				generador.setHeap("H", caracter)
+				generador.nextHeap()
+				generador.Expresion(fmt.Sprint(variable.(Variable).Valor), fmt.Sprint(variable.(Variable).Valor), "+", "1")
+				generador.Goto(ciclo)
+				generador.imprimirEtiqueta(salida)
+
+				//Segunda Palabra
+				generador.Comentario("Segunda Palabra")
+				ciclo = generador.nuevaEtiqueta()
+				salida = generador.nuevaEtiqueta()
+				caracter = generador.nuevoTemporal()
+
+				generador.imprimirEtiqueta(ciclo)
+				generador.getHeap(caracter, fmt.Sprint(expr.Valor))
+				generador.If(caracter, "==", "-1", salida)
+				generador.setHeap("H", caracter)
+				generador.nextHeap()
+				generador.Expresion(fmt.Sprint(expr.Valor), fmt.Sprint(expr.Valor), "+", "1")
+				generador.Goto(ciclo)
+				generador.imprimirEtiqueta(salida)
+
+				//Fin de la concatenacion
+				generador.setHeap("H", "-1")
+				generador.nextHeap()
+				generador.agregarCodigo("\n")
+				res = Valor{Valor: temp, Tipo: String}
+			} else if variable.(Variable).Tipo == Int && expr.Tipo == Int {
+				temp2 := generador.nuevoTemporal()
+				generador.getStack(temp, fmt.Sprint(variable.(Variable).Posicion))
+				generador.Expresion(temp2, temp, "+", fmt.Sprint(expr.Valor))
+				res = Valor{Valor: temp2, Tipo: Int}
+			} else if variable.(Variable).Tipo == Float && expr.Tipo == Float || (variable.(Variable).Tipo == Float && expr.Tipo == Int) || variable.(Variable).Tipo == Int && expr.Tipo == Float {
+				temp2 := generador.nuevoTemporal()
+				generador.getStack(temp, fmt.Sprint(variable.(Variable).Posicion))
+				generador.Expresion(temp2, temp, "+", fmt.Sprint(expr.Valor))
+				res = Valor{Valor: temp2, Tipo: Float}
 			} else {
 				listaErrores = append(listaErrores, Error_{
 					Tipo:    "SEMANTICO",
 					Linea:   "",
 					Columna: "",
-					Mensaje: fmt.Sprintf("No se puede realizar la suma entre %v y %v, combinación de tipos no válida\n", expr.Valor, variable.Valor),
+					Mensaje: fmt.Sprintf("No se puede realizar la suma entre %v y %v, combinación de tipos no válida", variable.(Variable).Valor, expr.Valor),
 				})
-				listaErrores = append(listaErrores, Error_{
-					Tipo:    "SEMANTICO",
-					Linea:   "",
-					Columna: "",
-					Mensaje: fmt.Sprintf("No se puede realizar la suma entre %v y %v, combinación de tipos no válida\n", expr.Valor, variable.Valor),
-				})
-				return Valor{Valor: fmt.Sprintf("Error: No se puede realizar la suma entre %v y %v, combinación de tipos no válida\n", expr.Valor, variable.Valor), Tipo: Error}
+				generador.Comentario(fmt.Sprintf("Error: No se puede realizar la suma entre %v y %v, combinación de tipos no válida", variable.(Variable).Valor, expr.Valor))
+				return Valor{Valor: 999999999, Tipo: Error}
 			}
-			return ts.modificarVariable(ctx.ID().GetText(), Valor{res, expr.Tipo, false, false, false, nil, 0})
-		}
-		return variable
-	}
-	if menos != nil {
-		if variable.Tipo != Error {
-			if variable.Tipo == Int && expr.Tipo == Int {
-				res = variable.Valor.(int) - expr.Valor.(int)
-			} else if variable.Tipo == Float && expr.Tipo == Float {
-				res = variable.Valor.(float64) - expr.Valor.(float64)
-			} else if variable.Tipo == Float && expr.Tipo == Int {
-				res = variable.Valor.(float64) - float64(expr.Valor.(int))
-				expr.Tipo = Float
-			} else if variable.Tipo == Int && expr.Tipo == Float {
-				res = float64(variable.Valor.(int)) - expr.Valor.(float64)
-				expr.Tipo = Float
-			} else {
-				listaErrores = append(listaErrores, Error_{
-					Tipo:    "SEMANTICO",
-					Linea:   "",
-					Columna: "",
-					Mensaje: fmt.Sprintf("No se puede realizar la resta entre %v y %v, combinación de tipos no válida\n", expr.Valor, variable.Valor),
-				})
-				return Valor{Valor: fmt.Sprintf("Error: No se puede realizar la resta entre %v y %v, combinación de tipos no válida\n", expr.Valor, variable.Valor), Tipo: Error}
+			pos := ts.modificarVariable(ctx.ID().GetText(), res, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn())
+			fmt.Println("POSICION: ", pos)
+			if pos != -1 {
+				tmp1 := generador.nuevoTemporal()
+				generador.Comentario("Asignación de variable: " + ctx.ID().GetText())
+				generador.Expresion(tmp1, "P", "+", fmt.Sprint(pos))
+				generador.setStack(tmp1, fmt.Sprint(res.Valor))
+				generador.agregarCodigo("\n")
 			}
-			return ts.modificarVariable(ctx.ID().GetText(), Valor{res, expr.Tipo, false, false, false, nil, 0})
+			return Valor{}
 		}
-		return variable
+		/* 		if menos != nil {
+			if variable.Tipo != Error {
+				if variable.Tipo == Int && expr.Tipo == Int {
+					res = variable.Valor.(int) - expr.Valor.(int)
+				} else if variable.Tipo == Float && expr.Tipo == Float {
+					res = variable.Valor.(float64) - expr.Valor.(float64)
+				} else if variable.Tipo == Float && expr.Tipo == Int {
+					res = variable.Valor.(float64) - float64(expr.Valor.(int))
+					expr.Tipo = Float
+				} else if variable.Tipo == Int && expr.Tipo == Float {
+					res = float64(variable.Valor.(int)) - expr.Valor.(float64)
+					expr.Tipo = Float
+				} else {
+					listaErrores = append(listaErrores, Error_{
+						Tipo:    "SEMANTICO",
+						Linea:   "",
+						Columna: "",
+						Mensaje: fmt.Sprintf("No se puede realizar la resta entre %v y %v, combinación de tipos no válida\n", expr.Valor, variable.Valor),
+					})
+					return Valor{Valor: fmt.Sprintf("Error: No se puede realizar la resta entre %v y %v, combinación de tipos no válida\n", expr.Valor, variable.Valor), Tipo: Error}
+				}
+				return ts.modificarVariable(ctx.ID().GetText(), Valor{res, expr.Tipo}, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn())
+			}
+			return variable
+		} */
+
+		pos := ts.modificarVariable(ctx.ID().GetText(), expr, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn())
+		if pos != -1 {
+			tmp1 := generador.nuevoTemporal()
+			generador.Comentario("Asignación de variable: " + ctx.ID().GetText())
+			generador.Expresion(tmp1, "P", "+", fmt.Sprint(pos))
+			generador.setStack(tmp1, fmt.Sprint(expr.Valor))
+			generador.agregarCodigo("\n")
+		}
+		return Valor{}
 	}
-	return ts.modificarVariable(ctx.ID().GetText(), expr) */
-	return nil
+	return Valor{}
 }
 
 func (v *Visitor) VisitPrint_instr(ctx *parser.Print_instrContext, ts Scope, generador *Generador) interface{} {
@@ -422,12 +500,12 @@ func (v *Visitor) VisitPrint_instr(ctx *parser.Print_instrContext, ts Scope, gen
 
 			temp := generador.nuevoTemporal()
 
-			generador.Expresion(temp, "P", "+", fmt.Sprint(ts.Size))
+			generador.Expresion(temp, "P", "+", fmt.Sprint(ts.Size["Size"]))
 			generador.Expresion(temp, temp, "+", "1")
 			generador.setStack(temp, fmt.Sprint(valor.Valor))
-			generador.nuevoAmbito(fmt.Sprint(ts.Size))
+			generador.nuevoAmbito(fmt.Sprint(ts.Size["Size"]))
 			generador.getFuncion("imprimirString")
-			generador.getAmbito(fmt.Sprint(ts.Size))
+			generador.getAmbito(fmt.Sprint(ts.Size["Size"]))
 		} else if valor.Tipo == Bool {
 			generador.Comentario("Imprimir Bool")
 			Salida := generador.nuevaEtiqueta()
@@ -716,7 +794,19 @@ func (v *Visitor) VisitGuard(ctx *parser.GuardContext, ts Scope, generador *Gene
 }
 
 func (v *Visitor) VisitIdExpr(ctx *parser.IdExprContext, ts Scope, generador *Generador) interface{} {
-	return ts.encontrarVariable(ctx.GetText())
+	res := ts.encontrarVariable(ctx.GetText(), ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn())
+	if res != nil {
+
+		tmp1 := generador.nuevoTemporal()
+		tmp2 := generador.nuevoTemporal()
+
+		generador.Comentario("Accediendo a variable: " + res.(Variable).ID)
+		generador.Expresion(tmp1, "P", "+", fmt.Sprint(res.(Variable).Posicion))
+		generador.getStack(tmp2, tmp1)
+		generador.agregarCodigo("\n")
+		return Valor{Valor: tmp2, Tipo: res.(Variable).Tipo}
+	}
+	return Valor{Valor: 999999999, Tipo: Error}
 }
 
 func (v *Visitor) VisitStrExpr(ctx *parser.StrExprContext, ts Scope, generador *Generador) interface{} {
@@ -772,7 +862,7 @@ func (v *Visitor) VisitCharExpr(ctx *parser.CharExprContext, ts Scope, generador
 }
 
 func (v *Visitor) VisitNilExpr(ctx *parser.NilExprContext, ts Scope, generador *Generador) interface{} {
-	return Valor{Valor: 999999999.0, Tipo: String}
+	return Valor{Valor: 999999999, Tipo: String}
 }
 
 func (v *Visitor) VisitUMenosExpr(ctx *parser.UmenosExprContext, ts Scope, generador *Generador) interface{} {
@@ -1931,7 +2021,7 @@ func main() {
 		p.AddErrorListener(antlr.NewDiagnosticErrorListener(false))
 		tree := p.Prog()
 		eval := Visitor{}
-		ts := Scope{Variables: make(map[string]Variable), Nombre: "Global", Anterior: nil, Funciones: make(map[string]Funcion), Size: 0}
+		ts := Scope{Variables: make(map[string]Variable), Nombre: "Global", Anterior: nil, Funciones: make(map[string]Funcion), Size: make(map[string]int)}
 		generador := Generador{}
 		eval.Visit(tree, ts, &generador)
 		res := generador.crearCodigoFinal()

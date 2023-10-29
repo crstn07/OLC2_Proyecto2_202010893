@@ -89,22 +89,22 @@ func (g *Generador) Expresion(res string, left string, op string, right string) 
 	g.agregarCodigo(fmt.Sprintf("%v = %v%v%v;\n", res, left, op, right))
 }
 
-// temporal = stack[posicion]
+// temporal = stack[(int)posicion]
 func (g *Generador) getStack(temporal string, posicion string) {
 	g.agregarCodigo(fmt.Sprintf("%v = stack[(int)%v];\n", temporal, posicion))
 }
 
-// stack[posicion] = valor
+// stack[(int)posicion] = valor
 func (g *Generador) setStack(posicion string, valor string) {
 	g.agregarCodigo(fmt.Sprintf("stack[(int)%v] = %v;\n", posicion, valor))
 }
 
-// temporal = heap[posicion]
+// temporal = heap[(int)posicion]
 func (g *Generador) getHeap(temporal string, posicion string) {
 	g.agregarCodigo(fmt.Sprintf("%v = heap[(int)%v];\n", temporal, posicion))
 }
 
-// heap[posicion] = valor
+// heap[(int)posicion] = valor
 func (g *Generador) setHeap(posicion string, valor string) {
 	g.agregarCodigo(fmt.Sprintf("heap[(int)%v] = %v;\n", posicion, valor))
 }
