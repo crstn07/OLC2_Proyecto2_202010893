@@ -114,7 +114,6 @@ func (s *Scope) encontrarVariable(id string, linea int, columna int) interface{}
 	variable, existe := s.Variables[id]
 	// Verificar si la variables existe en el ambito actual
 	if existe {
-		//return Valor{Valor: variable.Valor, Tipo: variable.Tipo}
 		return variable
 	} else {
 		if s.Anterior != nil {
@@ -126,7 +125,6 @@ func (s *Scope) encontrarVariable(id string, linea int, columna int) interface{}
 			Columna: fmt.Sprint(columna),
 			Mensaje: fmt.Sprintf("La variable '%s' no existe\n", id),
 		})
-		//return Valor{fmt.Sprintf("Error: La variable '%s' no existe\n", id), Error, false, false, false, nil, 0}
 		return nil
 	}
 }

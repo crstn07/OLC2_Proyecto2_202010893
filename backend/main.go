@@ -415,8 +415,8 @@ func (v *Visitor) VisitAsignacion(ctx *parser.AsignacionContext, ts Scope, gener
 			} else {
 				listaErrores = append(listaErrores, Error_{
 					Tipo:    "SEMANTICO",
-					Linea:   "",
-					Columna: "",
+					Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+					Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
 					Mensaje: fmt.Sprintf("No se puede realizar la suma entre %v y %v, combinación de tipos no válida", variable.(Variable).Valor, expr.Valor),
 				})
 				generador.Comentario(fmt.Sprintf("Error: No se puede realizar la suma entre %v y %v, combinación de tipos no válida", variable.(Variable).Valor, expr.Valor))
@@ -657,33 +657,50 @@ func (v *Visitor) VisitElseIf(ctx *parser.ElseIfContext, ts Scope, generador *Ge
 }
 
 func (v *Visitor) VisitSwitch(ctx *parser.Switch_instrContext, ts Scope, generador *Generador) interface{} {
-	/* match := false
-	expr := v.Visit(ctx.Expr(), ts, generador)
+	expr := v.Visit(ctx.Expr(), ts, generador).(Valor)
 	new_ts := NuevoScope(ts, "Switch")
 	for i := 0; ctx.Case_(i) != nil; i++ {
-		exprCase := v.Visit(ctx.Case_(i).Expr(), new_ts)
+		exprCase := v.Visit(ctx.Case_(i).Expr(), new_ts, generador).(Valor)
 		if exprCase.Tipo != expr.Tipo {
 			listaErrores = append(listaErrores, Error_{
 				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
+				Linea:   fmt.Sprint(ctx.Case_(i).Expr().GetStart().GetLine()),
+				Columna: fmt.Sprint(ctx.Case_(i).Expr().GetStart().GetColumn()),
 				Mensaje: fmt.Sprintf("No se pueden comparar valores de distinto tipo en un SWITCH \n"),
 			})
-			return Valor{Valor: "Error: No se pueden comparar valores de distinto tipo en un SWITCH \n", Tipo: Error}
+			return Valor{}
 		}
 	}
+
+	generador.Comentario("Instrucción SWITCH")
+	Default := generador.nuevaEtiqueta()
+	Salida := generador.nuevaEtiqueta()
+	var listaEtiquetas []string
+
 	for i := 0; ctx.Case_(i) != nil; i++ {
-		exprCase := v.Visit(ctx.Case_(i).Expr(), new_ts)
-		if exprCase.Valor == expr.Valor {
-			return v.Visit(ctx.Case_(i).Block(), new_ts)
-		}
+		generador.Comentario("CASE")
+		etq := generador.nuevaEtiqueta()
+		exprCase := v.Visit(ctx.Case_(i).Expr(), new_ts, generador).(Valor)
+		generador.If(fmt.Sprint(expr.Valor), "==", fmt.Sprint(exprCase.Valor), etq)
+		listaEtiquetas = append(listaEtiquetas, etq)
 	}
+	generador.Goto(Default)
+	for i := 0; ctx.Case_(i) != nil; i++ {
+		generador.imprimirEtiqueta(listaEtiquetas[i])
+		generador.Comentario("Instrucciones CASE")
+		v.Visit(ctx.Case_(i).Block(), new_ts, generador)
+		generador.Goto(Salida)
+	}
+
 	// Cuando no hizo match con ningun case
-	if !match && ctx.Default_(0) != nil {
-		return v.Visit(ctx.Default_(0).Block(), new_ts)
+	generador.imprimirEtiqueta(Default)
+	if ctx.Default_(0) != nil {
+		generador.Comentario("Instrucciones DEFAULT")
+		v.Visit(ctx.Default_(0).Block(), new_ts, generador)
+		generador.Goto(Salida)
 	}
-	return Valor{Valor: 999999999} */
-	return nil
+	generador.imprimirEtiqueta(Salida)
+	return Valor{}
 }
 
 func (v *Visitor) VisitWhile_instr(ctx *parser.While_instrContext, ts Scope, generador *Generador) interface{} {
@@ -897,8 +914,8 @@ func (v *Visitor) VisitUMenosExpr(ctx *parser.UmenosExprContext, ts Scope, gener
 	}
 	listaErrores = append(listaErrores, Error_{
 		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
+		Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+		Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 		Mensaje: "Negación Unaria solo puede realizarse con datos númericos\n",
 	})
 	generador.Comentario("Error: Negación Unaria solo puede realizarse con datos númericos")
@@ -924,8 +941,8 @@ func (v *Visitor) VisitNotExpr(ctx *parser.NotExprContext, ts Scope, generador *
 	}
 	listaErrores = append(listaErrores, Error_{
 		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
+		Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+		Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 		Mensaje: "Solo se puede realizar la operación NOT con tipos Bool",
 	})
 	generador.Comentario("Error: Solo se puede realizar la operación NOT con tipos Bool")
@@ -1637,8 +1654,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 	if l.Tipo == Error {
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 			Mensaje: fmt.Sprintf("No se puede realizar la operación\n       > " + l.Valor.(string) + "\n"),
 		})
 		//return Valor{Valor: "Error: No se puede realizar la operación\n       > " + l.Valor.(string) + "\n", Tipo: Error}
@@ -1657,8 +1674,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 	} else if l.Valor == "nil" || r.Valor == "nil" {
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 			Mensaje: "No se pueden hacer operaciones con nil\n",
 		})
 		//return Valor{Valor: "nil", Tipo: Error}
@@ -1716,8 +1733,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			}
 			listaErrores = append(listaErrores, Error_{
 				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
+				Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+				Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 				Mensaje: fmt.Sprintf("No se puede realizar la suma entre %v y %v, combinación de tipos no válida", l.Valor, r.Valor),
 			})
 			generador.Comentario(fmt.Sprintf("Error: No se puede realizar la suma entre %v y %v, combinación de tipos no válida", l.Valor, r.Valor))
@@ -1733,8 +1750,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			}
 			listaErrores = append(listaErrores, Error_{
 				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
+				Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+				Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 				Mensaje: fmt.Sprintf("No se puede realizar la resta entre %v y %v, combinación de tipos no válida", l.Valor, r.Valor),
 			})
 			generador.Comentario(fmt.Sprintf("Error: No se puede realizar la resta entre %v y %v, combinación de tipos no válida", l.Valor, r.Valor))
@@ -1750,8 +1767,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			}
 			listaErrores = append(listaErrores, Error_{
 				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
+				Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+				Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 				Mensaje: fmt.Sprintf("No se puede realizar la multiplicación entre %v y %v, combinación de tipos no válida", l.Valor, r.Valor),
 			})
 			generador.Comentario(fmt.Sprintf("Error: No se puede realizar la multiplicación entre %v y %v, combinación de tipos no válida", l.Valor, r.Valor))
@@ -1833,8 +1850,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			}
 			listaErrores = append(listaErrores, Error_{
 				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
+				Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+				Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 				Mensaje: fmt.Sprintf("No se puede realizar la división entre %v y %v, combinación de tipos no válida", l.Valor, r.Valor),
 			})
 			generador.Comentario(fmt.Sprintf("Error: No se puede realizar la división entre %v y %v, combinación de tipos no válida", l.Valor, r.Valor))
@@ -1880,8 +1897,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			}
 			listaErrores = append(listaErrores, Error_{
 				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
+				Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+				Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 				Mensaje: "No se puede realizar el módulo entre tipos no válidos\n",
 			})
 			generador.Comentario(fmt.Sprintf("Error: No se puede realizar el módulo entre %v y %v, combinación de tipos no válida", l.Valor, r.Valor))
@@ -1904,8 +1921,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			}
 			listaErrores = append(listaErrores, Error_{
 				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
+				Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+				Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 				Mensaje: fmt.Sprintf("Solo se puede realizar '%v' entre tipos iguales\n", op),
 			})
 			generador.Comentario(fmt.Sprintf("Error: Solo se puede realizar '%v' entre tipos iguales", op))
@@ -1915,8 +1932,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			if l.Tipo == Bool || r.Tipo == Bool {
 				listaErrores = append(listaErrores, Error_{
 					Tipo:    "SEMANTICO",
-					Linea:   "",
-					Columna: "",
+					Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+					Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 					Mensaje: fmt.Sprintf("No se admite tipo 'Bool' en la operación '%v'\n", op),
 				})
 				generador.Comentario(fmt.Sprintf("No se admite tipo 'Bool' en la operación '%v'\n", op))
@@ -1938,8 +1955,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			}
 			listaErrores = append(listaErrores, Error_{
 				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
+				Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+				Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 				Mensaje: fmt.Sprintf("Solo se admiten tipos iguales en la operacion '%v'\n", op),
 			})
 			generador.Comentario(fmt.Sprintf("Solo se admiten tipos iguales en la operacion '%v'\n", op))
@@ -1966,8 +1983,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			}
 			listaErrores = append(listaErrores, Error_{
 				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
+				Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+				Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 				Mensaje: fmt.Sprintf("Solo se admiten tipos 'Bool' en la operacion '&&'\n"),
 			})
 			generador.Comentario("Error: Solo se admiten tipos 'Bool' en la operacion '&&'")
@@ -1993,8 +2010,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			}
 			listaErrores = append(listaErrores, Error_{
 				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
+				Linea:   fmt.Sprint(ctx.GetLeft().GetStart().GetLine()),
+				Columna: fmt.Sprint(ctx.GetLeft().GetStart().GetColumn()),
 				Mensaje: "Solo se admiten tipos 'Bool' en la operacion '||'\n",
 			})
 			generador.Comentario("Error: Solo se admiten tipos 'Bool' en la operacion '||'")
@@ -2002,8 +2019,8 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 		}
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.GetOp().GetLine()),
+			Columna: fmt.Sprint(ctx.GetOp().GetColumn()),
 			Mensaje: fmt.Sprintf("Operando no reconocido -> '%v'\n", op),
 		})
 		generador.Comentario(fmt.Sprintf("Error: Operando no reconocido -> '%v'\n", op))
@@ -2088,7 +2105,6 @@ func main() {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		fmt.Println(jsonData)
 		w.Write(jsonData)
 
 	})
