@@ -164,9 +164,15 @@ func (v *Visitor) VisitInstr(ctx *parser.InstrContext, ts Scope, generador *Gene
 		return v.Visit(ctx.Guard(), ts, generador)
 	}
 	if ctx.CONTINUE() != nil {
+		generador.Comentario("Instrucción Continue")
+		generador.Goto(ts.etqCiclo)
+		return Valor{}
 		//return Valor{Valor: 999999999, Continue: true}
 	}
 	if ctx.BREAK() != nil {
+		generador.Comentario("Instrucción Break")
+		generador.Goto(ts.etqSalida)
+		return Valor{}
 		//return Valor{Valor: 999999999, Break: true}
 	}
 	if ctx.RETURN() != nil {
@@ -556,7 +562,7 @@ func (v *Visitor) VisitIf(ctx *parser.IfContext, ts Scope, generador *Generador)
 		True := generador.nuevaEtiqueta()
 		False := generador.nuevaEtiqueta()
 		new_ts := NuevoScope(ts, "If")
-		ts.etqSalida = Salida
+		//new_ts.etqSalida = Salida
 
 		generador.Comentario("Instrucción IF")
 		generador.If(fmt.Sprint(condicion.Valor), "==", "1", True)
@@ -591,7 +597,7 @@ func (v *Visitor) VisitIfElse(ctx *parser.IfElseContext, ts Scope, generador *Ge
 		True := generador.nuevaEtiqueta()
 		False := generador.nuevaEtiqueta()
 		new_ts := NuevoScope(ts, "If")
-		ts.etqSalida = Salida
+		//new_ts.etqSalida = Salida
 
 		generador.Comentario("Instrucción IF-ELSE")
 		generador.If(fmt.Sprint(condicion.Valor), "==", "1", True)
@@ -627,7 +633,7 @@ func (v *Visitor) VisitElseIf(ctx *parser.ElseIfContext, ts Scope, generador *Ge
 		True := generador.nuevaEtiqueta()
 		False := generador.nuevaEtiqueta()
 		new_ts := NuevoScope(ts, "If")
-		ts.etqSalida = Salida
+		//new_ts.etqSalida = Salida
 
 		generador.Comentario("Instrucción ELSE-IF")
 		generador.If(fmt.Sprint(condicion.Valor), "==", "1", True)
@@ -709,6 +715,8 @@ func (v *Visitor) VisitWhile_instr(ctx *parser.While_instrContext, ts Scope, gen
 	Ciclo := generador.nuevaEtiqueta()
 	True := generador.nuevaEtiqueta()
 	False := generador.nuevaEtiqueta()
+	new_ts.etqSalida = False
+	new_ts.etqCiclo = Ciclo
 
 	generador.Comentario("Instrucción WHILE")
 	generador.imprimirEtiqueta(Ciclo)
@@ -765,6 +773,8 @@ func (v *Visitor) VisitFor(ctx *parser.For_instrContext, ts Scope, generador *Ge
 			True := generador.nuevaEtiqueta()
 			False := generador.nuevaEtiqueta()
 			temp := generador.nuevoTemporal()
+			ts_for.etqSalida = False
+			ts_for.etqCiclo = Ciclo
 
 			//generador.Expresion(temp, fmt.Sprint(expr1.Valor), "", "")
 			generador.getStack(temp, fmt.Sprint(pos))
@@ -804,30 +814,39 @@ func (v *Visitor) VisitFor(ctx *parser.For_instrContext, ts Scope, generador *Ge
 }
 
 func (v *Visitor) VisitGuard(ctx *parser.GuardContext, ts Scope, generador *Generador) interface{} {
-	/* new_ts := NuevoScope(ts, "Guard")
-	condicion := v.Visit(ctx.Expr(), ts, generador)
+	condicion := v.Visit(ctx.Expr(), ts, generador).(Valor)
 	if condicion.Tipo == Bool {
-		if !condicion.Valor.(bool) { //GUARD
-			return v.Visit(ctx.Block(), new_ts)
-		}
-		return Valor{Valor: 999999999}
+		Salida := generador.nuevaEtiqueta()
+		True := generador.nuevaEtiqueta()
+		False := generador.nuevaEtiqueta()
+		new_ts := NuevoScope(ts, "Guard")
+		//new_ts.etqSalida = Salida
+
+		generador.Comentario("Instrucción GUARD")
+		generador.If(fmt.Sprint(condicion.Valor), "==", "1", False)
+		generador.Goto(True)
+		generador.imprimirEtiqueta(True)
+		v.Visit(ctx.Block(), new_ts, generador)
+		generador.Goto(Salida)
+		generador.imprimirEtiqueta(False)
+		generador.imprimirEtiqueta(Salida)
+		return Valor{}
 	} else if condicion.Tipo == Error {
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 			Mensaje: fmt.Sprintf("Expresión no válida en el GUARD\n       > %v\n", condicion.Valor),
 		})
-		return Valor{Valor: fmt.Sprintf("\nError: Expresión no válida en el GUARD\n       > %v\n", condicion.Valor), Tipo: Error}
+		return Valor{}
 	}
 	listaErrores = append(listaErrores, Error_{
 		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
+		Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+		Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 		Mensaje: fmt.Sprintf("\nError: La expresión '%v' en el GUARD no es booleana\n", condicion.Valor),
 	})
-	return Valor{Valor: fmt.Sprintf("\nError: La expresión '%v' en el GUARD no es booleana\n", condicion.Valor), Tipo: Error} */
-	return nil
+	return Valor{}
 }
 
 func (v *Visitor) VisitIdExpr(ctx *parser.IdExprContext, ts Scope, generador *Generador) interface{} {

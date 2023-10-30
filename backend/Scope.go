@@ -75,7 +75,7 @@ var listaErrores []Error_
 func NuevoScope(ant Scope, nombre string) Scope {
 	tam := make(map[string]int)
 	tam["Size"] = 0
-	return Scope{Anterior: &ant, Variables: make(map[string]Variable), Nombre: nombre, Size: tam}
+	return Scope{Anterior: &ant, Variables: make(map[string]Variable), Nombre: nombre, Size: tam, etqSalida: ant.etqSalida, etqCiclo: ant.etqCiclo}
 }
 
 func (s *Scope) totalSize() int {
