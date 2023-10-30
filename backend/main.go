@@ -500,12 +500,12 @@ func (v *Visitor) VisitPrint_instr(ctx *parser.Print_instrContext, ts Scope, gen
 
 			temp := generador.nuevoTemporal()
 
-			generador.Expresion(temp, "P", "+", fmt.Sprint(ts.Size["Size"]))
+			generador.Expresion(temp, "P", "+", fmt.Sprint(ts.totalSize()))
 			generador.Expresion(temp, temp, "+", "1")
 			generador.setStack(temp, fmt.Sprint(valor.Valor))
-			generador.nuevoAmbito(fmt.Sprint(ts.Size["Size"]))
+			generador.nuevoAmbito(fmt.Sprint(ts.totalSize()))
 			generador.getFuncion("imprimirString")
-			generador.getAmbito(fmt.Sprint(ts.Size["Size"]))
+			generador.getAmbito(fmt.Sprint(ts.totalSize()))
 		} else if valor.Tipo == Bool {
 			generador.Comentario("Imprimir Bool")
 			Salida := generador.nuevaEtiqueta()
@@ -550,87 +550,110 @@ func (v *Visitor) VisitIf_instr(ctx *parser.If_instrContext, ts Scope, generador
 }
 
 func (v *Visitor) VisitIf(ctx *parser.IfContext, ts Scope, generador *Generador) interface{} {
-	/* new_ts := NuevoScope(ts, "If")
-	condicion := v.Visit(ctx.Expr(), ts, generador)
+	condicion := v.Visit(ctx.Expr(), ts, generador).(Valor)
 	if condicion.Tipo == Bool {
-		if condicion.Valor.(bool) { //IF
-			return v.Visit(ctx.Block(), new_ts)
-		}
-		return Valor{Valor: 999999999}
+		Salida := generador.nuevaEtiqueta()
+		True := generador.nuevaEtiqueta()
+		False := generador.nuevaEtiqueta()
+		new_ts := NuevoScope(ts, "If")
+		ts.etqSalida = Salida
+
+		generador.Comentario("Instrucción IF")
+		generador.If(fmt.Sprint(condicion.Valor), "==", "1", True)
+		generador.Goto(Salida)
+		generador.imprimirEtiqueta(True)
+		v.Visit(ctx.Block(), new_ts, generador)
+		generador.Goto(Salida)
+		generador.imprimirEtiqueta(False)
+		generador.imprimirEtiqueta(Salida)
 	} else if condicion.Tipo == Error {
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 			Mensaje: fmt.Sprintf("Expresión no válida en el IF\n       > %v\n", condicion.Valor),
 		})
-		return Valor{Valor: fmt.Sprintf("\nError: Expresión no válida en el IF\n       > %v\n", condicion.Valor), Tipo: Error}
+	} else {
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
+			Mensaje: fmt.Sprintf("La expresión '%v' en el IF no es booleana\n", condicion.Valor),
+		})
 	}
-	listaErrores = append(listaErrores, Error_{
-		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
-		Mensaje: fmt.Sprintf("La expresión '%v' en el IF no es booleana\n", condicion.Valor),
-	})
-	return Valor{Valor: fmt.Sprintf("\nError: La expresión '%v' en el IF no es booleana\n", condicion.Valor), Tipo: Error} */
-	return nil
+	return Valor{}
 }
 
 func (v *Visitor) VisitIfElse(ctx *parser.IfElseContext, ts Scope, generador *Generador) interface{} {
-	/* condicion := v.Visit(ctx.Expr(), ts, generador)
+	condicion := v.Visit(ctx.Expr(), ts, generador).(Valor)
 	if condicion.Tipo == Bool {
-		if condicion.Valor.(bool) { // IF
-			new_ts := NuevoScope(ts, "If")
-			return v.Visit(ctx.Block(0), new_ts)
-		} else { // ELSE
-			new_ts := NuevoScope(ts, "Else")
-			return v.Visit(ctx.Block(1), new_ts)
-		}
+		Salida := generador.nuevaEtiqueta()
+		True := generador.nuevaEtiqueta()
+		False := generador.nuevaEtiqueta()
+		new_ts := NuevoScope(ts, "If")
+		ts.etqSalida = Salida
+
+		generador.Comentario("Instrucción IF-ELSE")
+		generador.If(fmt.Sprint(condicion.Valor), "==", "1", True)
+		generador.Goto(False)
+		generador.imprimirEtiqueta(True)
+		v.Visit(ctx.Block(0), new_ts, generador)
+		generador.Goto(Salida)
+		generador.imprimirEtiqueta(False)
+		v.Visit(ctx.Block(1), new_ts, generador)
+		generador.imprimirEtiqueta(Salida)
 	} else if condicion.Tipo == Error {
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 			Mensaje: fmt.Sprintf("Expresión no válida en el IF\n       > %v\n", condicion.Valor),
 		})
-		return Valor{Valor: fmt.Sprintf("\nError: Expresión no válida en el IF\n       > %v\n", condicion.Valor), Tipo: Error}
+	} else {
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
+			Mensaje: fmt.Sprintf("La expresión '%v' en el IF no es booleana\n", condicion.Valor),
+		})
 	}
-	listaErrores = append(listaErrores, Error_{
-		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
-		Mensaje: fmt.Sprintf("La expresión '%v' en el IF no es booleana\n", condicion.Valor),
-	})
-	return Valor{Valor: fmt.Sprintf("\nError: La expresión '%v' en el IF no es booleana\n", condicion.Valor), Tipo: Error} */
-	return nil
+	return Valor{}
 }
 
 func (v *Visitor) VisitElseIf(ctx *parser.ElseIfContext, ts Scope, generador *Generador) interface{} {
-	/* condicion := v.Visit(ctx.Expr(), ts, generador)
+	condicion := v.Visit(ctx.Expr(), ts, generador).(Valor)
 	if condicion.Tipo == Bool {
-		if condicion.Valor.(bool) { // IF
-			new_ts := NuevoScope(ts, "If")
-			return v.Visit(ctx.Block(), new_ts)
-		} else { //ELSE
-			return v.Visit(ctx.If_instr(), ts, generador)
-		}
+		Salida := generador.nuevaEtiqueta()
+		True := generador.nuevaEtiqueta()
+		False := generador.nuevaEtiqueta()
+		new_ts := NuevoScope(ts, "If")
+		ts.etqSalida = Salida
+
+		generador.Comentario("Instrucción ELSE-IF")
+		generador.If(fmt.Sprint(condicion.Valor), "==", "1", True)
+		generador.Goto(False)
+		generador.imprimirEtiqueta(True)
+		v.Visit(ctx.Block(), new_ts, generador)
+		generador.Goto(Salida)
+		generador.imprimirEtiqueta(False)
+		v.Visit(ctx.If_instr(), ts, generador)
+		generador.imprimirEtiqueta(Salida)
 	} else if condicion.Tipo == Error {
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 			Mensaje: fmt.Sprintf("Expresión no válida en el IF\n       > %v\n", condicion.Valor),
 		})
-		return Valor{Valor: fmt.Sprintf("\nError: Expresión no válida en el IF\n       > %v\n", condicion.Valor), Tipo: Error}
+	} else {
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
+			Mensaje: fmt.Sprintf("La expresión '%v' en el IF no es booleana\n", condicion.Valor),
+		})
 	}
-	listaErrores = append(listaErrores, Error_{
-		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
-		Mensaje: fmt.Sprintf("La expresión '%v' en el IF no es booleana\n", condicion.Valor),
-	})
-	return Valor{Valor: fmt.Sprintf("\nError: La expresión '%v' en el IF no es booleana\n", condicion.Valor), Tipo: Error} */
-	return nil
+	return Valor{}
 }
 
 func (v *Visitor) VisitSwitch(ctx *parser.Switch_instrContext, ts Scope, generador *Generador) interface{} {
