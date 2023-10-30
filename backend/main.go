@@ -405,7 +405,7 @@ func (v *Visitor) VisitAsignacion(ctx *parser.AsignacionContext, ts Scope, gener
 			} else if variable.(Variable).Tipo == Int && expr.Tipo == Int {
 				temp2 := generador.nuevoTemporal()
 				generador.getStack(temp, fmt.Sprint(variable.(Variable).Posicion))
-				generador.Expresion(temp2, temp, "+", fmt.Sprint(expr.Valor))
+				generador.Expresion(temp2, "(int)"+temp, "+", "(int)"+fmt.Sprint(expr.Valor))
 				res = Valor{Valor: temp2, Tipo: Int}
 			} else if variable.(Variable).Tipo == Float && expr.Tipo == Float || (variable.(Variable).Tipo == Float && expr.Tipo == Int) || variable.(Variable).Tipo == Int && expr.Tipo == Float {
 				temp2 := generador.nuevoTemporal()
@@ -704,106 +704,103 @@ func (v *Visitor) VisitSwitch(ctx *parser.Switch_instrContext, ts Scope, generad
 }
 
 func (v *Visitor) VisitWhile_instr(ctx *parser.While_instrContext, ts Scope, generador *Generador) interface{} {
-	/* out := ""
-	condicion := v.Visit(ctx.Expr(), ts, generador)
+	new_ts := NuevoScope(ts, "While")
+
+	Ciclo := generador.nuevaEtiqueta()
+	True := generador.nuevaEtiqueta()
+	False := generador.nuevaEtiqueta()
+
+	generador.Comentario("Instrucción WHILE")
+	generador.imprimirEtiqueta(Ciclo)
+	condicion := v.Visit(ctx.Expr(), ts, generador).(Valor)
 	if condicion.Tipo == Bool {
-		for v.Visit(ctx.Expr(), ts, generador).Valor.(bool) { //WHILE
-			new_ts := NuevoScope(ts, "While")
-			//out += v.Visit(ctx.Block(), new_ts).Valor.(string)
-			res := v.Visit(ctx.Block(), new_ts)
-			out += res.Valor.(string)
-			if res.Break {
-				break
-			}
-		}
-		return Valor{Valor: out}
+		generador.If(fmt.Sprint(condicion.Valor), "==", "1", True)
+		generador.Goto(False)
+		generador.imprimirEtiqueta(True)
+		v.Visit(ctx.Block(), new_ts, generador)
+		generador.Goto(Ciclo)
+		generador.imprimirEtiqueta(False)
+		/* 		if res.Break {
+			break
+		} */
+		return Valor{}
 	} else if condicion.Tipo == Error {
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 			Mensaje: fmt.Sprintf("Expresión no válida en el WHILE\n       > %v\n", condicion.Valor),
 		})
-		return Valor{Valor: fmt.Sprintf("\nError: Expresión no válida en el WHILE\n       > %v\n", condicion.Valor), Tipo: Error}
+		return Valor{}
 	}
 	listaErrores = append(listaErrores, Error_{
 		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
+		Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+		Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 		Mensaje: fmt.Sprintf("\nError: La expresión '%v' en el WHILE no es booleana\n", condicion.Valor),
 	})
-	return Valor{Valor: fmt.Sprintf("\nError: La expresión '%v' en el WHILE no es booleana\n", condicion.Valor), Tipo: Error} */
-	return nil
+	return Valor{}
 }
 
 func (v *Visitor) VisitFor(ctx *parser.For_instrContext, ts Scope, generador *Generador) interface{} {
-	/* ts_for := NuevoScope(ts, "For")
-	out := ""
-	id := ctx.ID().GetText()
-	// Viene una Expresion. Solo puede ser String o Array
-	if ctx.Expr() != nil {
-		if expr := v.Visit(ctx.Expr(), ts_for); expr.Tipo == String { //Falta: Si expr.TIpo == Array
-			//Ejecuta el for
-			ts_for.agregarVariable(Variable{id, Character, " ", true, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al ambito del FOR
-			for i := 0; i < len(expr.Valor.(string)); i++ {
-				caracter := expr.Valor.(string)[i]
-				ts_for.modificarConstante(id, Valor{fmt.Sprintf("%c", caracter), Character, false, false, false, nil, 0}) // Cambia el valor del caracter actual
-				// Ejecuta el bloque
-				ts_block := NuevoScope(ts_for, "Bloque For") // Crea un nuevo scope para el bloque del FOR
-				//out += v.Visit(ctx.Block(), ts_block).Valor.(string)
-
-				res := v.Visit(ctx.Block(), ts_block)
-				out += res.Valor.(string)
-				if res.Break {
-					break
-				}
-			}
-			return Valor{Valor: out}
-		}
-		//Si expr.TIpo == Array :
-		//Bloque de codigo
-	}
+	ts_for := NuevoScope(ts, "For")
 	// Viene un rango
 	if ctx.Rango() != nil {
-		expr1 := v.Visit(ctx.Rango().Expr(0), ts_for)
-		expr2 := v.Visit(ctx.Rango().Expr(1), ts_for)
+		expr1 := v.Visit(ctx.Rango().Expr(0), ts_for, generador).(Valor)
+		expr2 := v.Visit(ctx.Rango().Expr(1), ts_for, generador).(Valor)
 		if expr1.Tipo == Int && expr2.Tipo == Int { // Ambas expresiones son INT
-			if expr1.Valor.(int) <= expr2.Valor.(int) { // La expresion 1 es menor que la expresion 2
-				//Ejecuta el for
-				ts_for.agregarVariable(Variable{id, Int, expr1.Valor.(int), true, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al ambito del FOR
-				for ts_for.encontrarVariable(id).Valor.(int) <= expr2.Valor.(int) {
-					// Ejecuta el bloque
-					ts_block := NuevoScope(ts_for, "Bloque For") // Crea un nuevo scope para el bloque del FOR
-					//out += v.Visit(ctx.Block(), ts_block).Valor.(string)
-					res := v.Visit(ctx.Block(), ts_block)
-					out += res.Valor.(string)
-					if res.Break {
-						break
-					}
-					ts_for.modificarConstante(id, Valor{ts_for.encontrarVariable(id).Valor.(int) + 1, Int, false, false, false, nil, 0}) // Aumenta en 1 la variable del FOR
-				}
-				return Valor{Valor: out}
+			fmt.Println(expr1.Valor, ", ", expr2.Valor)
+			//if expr1.Valor.(int) <= expr2.Valor.(int) { // La expresion 1 es menor que la expresion 2
+			generador.Comentario("Instrucción FOR")
+			pos := ts_for.agregarVariable(Variable{ctx.ID().GetText(), Int, expr1.Valor.(int), false, 0, false, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+			if pos == -1 {
+				generador.Comentario("Error: La variable ya existe")
+				return Valor{}
 			}
-			// La expresion 1 es mayor que la expresion 2 -> Error
-			listaErrores = append(listaErrores, Error_{
-				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
-				Mensaje: fmt.Sprintf("\nError: La expresión izquierda '%v' en el rango del FOR es mayor que la derecha\n", expr1.Valor),
-			})
-			return Valor{Valor: fmt.Sprintf("\nError: La expresión izquierda '%v' en el rango del FOR es mayor que la derecha\n", expr1.Valor), Tipo: Error}
+			generador.Comentario("Declaración de variable: " + ctx.ID().GetText())
+			generador.setStack(fmt.Sprint(pos), fmt.Sprint(expr1.Valor))
+			generador.agregarCodigo("\n")
+
+			Ciclo := generador.nuevaEtiqueta()
+			True := generador.nuevaEtiqueta()
+			False := generador.nuevaEtiqueta()
+			temp := generador.nuevoTemporal()
+
+			//generador.Expresion(temp, fmt.Sprint(expr1.Valor), "", "")
+			generador.getStack(temp, fmt.Sprint(pos))
+			generador.imprimirEtiqueta(Ciclo)
+			generador.If(temp, "<=", fmt.Sprint(expr2.Valor), True)
+			generador.Goto(False)
+			generador.imprimirEtiqueta(True)
+			v.Visit(ctx.Block(), ts_for, generador)
+			generador.Comentario("Aumento de variable: " + ctx.ID().GetText())
+			generador.Expresion(temp, temp, "+", "1")
+			generador.setStack(fmt.Sprint(pos), temp)
+			generador.Goto(Ciclo)
+			generador.imprimirEtiqueta(False)
+			fmt.Println("LLEGO AQUI")
+			return Valor{}
+
+			//}
+			/* 			// La expresion 1 es mayor que la expresion 2 -> Error
+			   			listaErrores = append(listaErrores, Error_{
+			   				Tipo:    "SEMANTICO",
+			   				Linea:   fmt.Sprint(ctx.Rango().Expr(0).GetStart().GetLine()),
+			   				Columna: fmt.Sprint(ctx.Rango().Expr(0).GetStart().GetColumn()),
+			   				Mensaje: fmt.Sprintf("\nError: La expresión izquierda '%v' en el rango del FOR es mayor que la derecha\n", expr1.Valor),
+			   			})
+			   			return Valor{} */
 		}
 		// No es INT -> Error
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.Rango().Expr(0).GetStart().GetLine()),
+			Columna: fmt.Sprint(ctx.Rango().Expr(0).GetStart().GetColumn()),
 			Mensaje: fmt.Sprintf("\nError: La expresión '%v' o '%v' en el rango del FOR no es de tipo 'Int'\n", expr1.Valor, expr2.Valor),
 		})
-		return Valor{Valor: fmt.Sprintf("\nError: La expresion '%v' o '%v' en el rango del FOR no es de tipo 'Int'\n", expr1.Valor, expr2.Valor), Tipo: Error}
+		return Valor{}
 	}
-	return Valor{Valor: 999999999} */
-	return nil
+	return Valor{}
 }
 
 func (v *Visitor) VisitGuard(ctx *parser.GuardContext, ts Scope, generador *Generador) interface{} {
@@ -910,7 +907,7 @@ func (v *Visitor) VisitUMenosExpr(ctx *parser.UmenosExprContext, ts Scope, gener
 	if value.Tipo == Int || value.Tipo == Float {
 		temp := generador.nuevoTemporal()
 		generador.Expresion(temp, fmt.Sprint(value.Valor), "*", "-1")
-		return Valor{Valor: temp, Tipo: Int}
+		return Valor{Valor: temp, Tipo: value.Tipo}
 	}
 	listaErrores = append(listaErrores, Error_{
 		Tipo:    "SEMANTICO",
@@ -1666,7 +1663,7 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 			Tipo:    "SEMANTICO",
 			Linea:   "",
 			Columna: "",
-			Mensaje: fmt.Sprintf("No se puede realizar la operación\n       > " + r.Valor.(string) + "\n"),
+			Mensaje: fmt.Sprintf("No se puede realizar la operación %v", r.Valor),
 		})
 		//return Valor{Valor: "Error: No se puede realizar la operación\n       > " + r.Valor.(string) + "\n", Tipo: Error}
 		generador.Comentario("Error: No se puede realizar la operación > " + r.Valor.(string) + "\n")
@@ -1725,7 +1722,7 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 				generador.agregarCodigo("\n")
 				return Valor{Valor: temp, Tipo: String}
 			} else if l.Tipo == Int && r.Tipo == Int {
-				generador.Expresion(temp, fmt.Sprint(l.Valor), "+", fmt.Sprint(r.Valor))
+				generador.Expresion(temp, "(int)"+fmt.Sprint(l.Valor), "+", "(int)"+fmt.Sprint(r.Valor))
 				return Valor{Valor: temp, Tipo: Int}
 			} else if (l.Tipo == Float && r.Tipo == Float) || (l.Tipo == Float && r.Tipo == Int) || (l.Tipo == Int && r.Tipo == Float) {
 				generador.Expresion(temp, fmt.Sprint(l.Valor), "+", fmt.Sprint(r.Valor))
@@ -1742,7 +1739,7 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 		} else if op == "-" {
 			//generador.Comentario("Operacion -")
 			if l.Tipo == Int && r.Tipo == Int {
-				generador.Expresion(temp, fmt.Sprint(l.Valor), "-", fmt.Sprint(r.Valor))
+				generador.Expresion(temp, "(int)"+fmt.Sprint(l.Valor), "-", "(int)"+fmt.Sprint(r.Valor))
 				return Valor{Valor: temp, Tipo: Int}
 			} else if (l.Tipo == Float && r.Tipo == Float) || (l.Tipo == Float && r.Tipo == Int) || (l.Tipo == Int && r.Tipo == Float) {
 				generador.Expresion(temp, fmt.Sprint(l.Valor), "-", fmt.Sprint(r.Valor))
@@ -1759,7 +1756,7 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 		} else if op == "*" {
 			//generador.Comentario("Operacion *")
 			if l.Tipo == Int && r.Tipo == Int {
-				generador.Expresion(temp, fmt.Sprint(l.Valor), "*", fmt.Sprint(r.Valor))
+				generador.Expresion(temp, "(int)"+fmt.Sprint(l.Valor), "*", "(int)"+fmt.Sprint(r.Valor))
 				return Valor{Valor: temp, Tipo: Int}
 			} else if (l.Tipo == Float && r.Tipo == Float) || (l.Tipo == Float && r.Tipo == Int) || (l.Tipo == Int && r.Tipo == Float) {
 				generador.Expresion(temp, fmt.Sprint(l.Valor), "*", fmt.Sprint(r.Valor))
@@ -1808,7 +1805,7 @@ func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Ge
 				generador.Expresion(temp, "999999999", "", "") //nil
 				generador.Goto(salida)
 				generador.imprimirEtiqueta(correcto)
-				generador.Expresion(temp, fmt.Sprint(l.Valor), "/", fmt.Sprint(r.Valor))
+				generador.Expresion(temp, "(int)"+fmt.Sprint(l.Valor), "/", "(int)"+fmt.Sprint(r.Valor))
 				generador.imprimirEtiqueta(salida)
 				return Valor{Valor: temp, Tipo: Int}
 			} else if (l.Tipo == Float && r.Tipo == Float) || (l.Tipo == Float && r.Tipo == Int) || (l.Tipo == Int && r.Tipo == Float) {
