@@ -94,6 +94,10 @@ function App() {
       .then(response => {
         console.log(response);
         let listaErrores = []
+        if (response.Salida == null) {
+          alert("No hay errores")
+          return
+        }
         listaErrores = response.Salida
         var datos = `
         <!DOCTYPE html>
