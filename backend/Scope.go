@@ -26,9 +26,6 @@ type Variable struct {
 	Valor     interface{}
 	Constante bool
 	Posicion  int
-	enHeap    bool
-	etqTrue   string
-	etqFalse  string
 	Linea     int
 	Columna   int
 }
@@ -109,6 +106,21 @@ func (s *Scope) agregarVariable(variable Variable) int {
 	return variable.Posicion
 }
 
+func (s *Scope) agregarParam(variable Variable) {
+	// Verificar si una variable ya existe en el ambito actual
+	if _, existe := s.Variables[variable.ID]; existe {
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(variable.Linea),
+			Columna: fmt.Sprint(variable.Columna),
+			Mensaje: fmt.Sprintf("La variable '%v' ya existe\n", variable.ID),
+		})
+	}
+	variable.Posicion = s.Size["Size"]
+	s.Variables[variable.ID] = variable // Agrega la variable al scope actual
+	s.Size["Size"] = s.Size["Size"] + 1 // Aumenta el tamaño del scope actual
+}
+
 func (s *Scope) encontrarVariable(id string, linea int, columna int) interface{} {
 	// Busca la variable en el ambito actual
 	variable, existe := s.Variables[id]
@@ -169,4 +181,46 @@ func (s *Scope) modificarVariable(id string, expr Valor, linea int, columna int)
 		})
 		return -1
 	}
+}
+
+func (s *Scope) agregarFuncion(funcion Funcion) {
+	// Verificar si la función ya existe en el ambito actual
+	if _, existe := s.Funciones[funcion.ID]; existe {
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(funcion.Linea),
+			Columna: fmt.Sprint(funcion.Columna),
+			Mensaje: fmt.Sprintf("La función '%v' ya existe\n", funcion.ID),
+		})
+	}
+	s.Funciones[funcion.ID] = funcion // Agrega la función al la tabla de simbolos
+}
+
+func (s *Scope) encontrarFuncion(id string) Funcion {
+	// Busca la función en el ambito actual
+	funcion, existe := s.Funciones[id]
+	if existe {
+		return funcion
+	} else {
+		if s.Anterior != nil {
+			return s.Anterior.encontrarFuncion(id)
+		}
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(funcion.Linea),
+			Columna: fmt.Sprint(funcion.Columna),
+			Mensaje: fmt.Sprintf("La función '%v' no existe\n", funcion.ID),
+		})
+		return Funcion{ID: ""}
+	}
+}
+
+func (s *Scope) agregarVariablePorReferencia(id string, variable Variable) int {
+	if _, existe := s.Variables[variable.ID]; !existe {
+		s.Variables[id] = variable // Agrega la variable al scopes
+	}
+	//	variable.Posicion = s.totalSize()
+	s.Variables[variable.ID] = variable // Agrega la variable al scope actual
+	s.Size["Size"] = s.Size["Size"] + 1 // Aumenta el tamaño del scope actual
+	return variable.Posicion
 }

@@ -19,6 +19,7 @@ type Visitor struct {
 }
 
 var tablaSimbolos Scope
+var ts_funciones map[string]Scope
 
 func (v *Visitor) Visit(tree antlr.ParseTree, ts Scope, generador *Generador) interface{} {
 	switch val := tree.(type) {
@@ -176,12 +177,14 @@ func (v *Visitor) VisitInstr(ctx *parser.InstrContext, ts Scope, generador *Gene
 		//return Valor{Valor: 999999999, Break: true}
 	}
 	if ctx.RETURN() != nil {
-		/* 		if ctx.Expr() != nil {
-		   			retorno := v.Visit(ctx.Expr(), ts, generador)
-		   			fmt.Println("Retorno ctx.RETURN(): ", retorno.Valor, retorno.Tipo)
-		   			return Valor{ReturnVal: retorno.Valor, ReturnTipo: retorno.Tipo, Return: true}
-		   		}
-		   		return Valor{ReturnVal: nil, ReturnTipo: Void, Return: true} */
+		if ctx.Expr() != nil {
+			retorno := v.Visit(ctx.Expr(), ts, generador).(Valor)
+			fmt.Println("Retorno: ", retorno.Valor, retorno.Tipo)
+			generador.Comentario("Instrucción Return")
+			generador.setStack("P", fmt.Sprint(retorno.Valor))
+			return Valor{Valor: retorno.Valor, Tipo: retorno.Tipo}
+		}
+		return Valor{}
 	}
 	if ctx.Funcion() != nil {
 		return v.Visit(ctx.Funcion(), ts, generador)
@@ -230,7 +233,6 @@ func (v *Visitor) VisitDeclaracion(ctx *parser.DeclaracionContext, ts Scope, gen
 func (v *Visitor) VisitDeclaracionTipoValor(ctx *parser.DeclaracionTipoValorContext, ts Scope, generador *Generador) interface{} {
 	expr := v.Visit(ctx.Expr(), ts, generador).(Valor) // Obtiene el valor de la expresión y su tipo
 	constante := true
-	heap := true
 	if ctx.LET() == nil {
 		constante = false
 	}
@@ -238,7 +240,6 @@ func (v *Visitor) VisitDeclaracionTipoValor(ctx *parser.DeclaracionTipoValorCont
 	switch ctx.Tipo().GetText() {
 	case "String":
 		tipo = String
-		heap = true
 	case "Bool":
 		tipo = Bool
 	case "Character":
@@ -270,11 +271,11 @@ func (v *Visitor) VisitDeclaracionTipoValor(ctx *parser.DeclaracionTipoValorCont
 	} */
 	var pos int
 	if tipo == expr.Tipo {
-		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, expr.Valor, constante, 0, heap, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope
 	} else if tipo == Float && expr.Tipo == Int {
-		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), Float, expr.Valor, constante, 0, false, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope de tipo float
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), Float, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope de tipo float
 	} else if tipo == Character && expr.Tipo == String && len(expr.Valor.(string)) == 1 {
-		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), Character, expr.Valor, constante, 0, false, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope de tipo Character
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), Character, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope de tipo Character
 	} else {
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
@@ -296,13 +297,11 @@ func (v *Visitor) VisitDeclaracionTipoValor(ctx *parser.DeclaracionTipoValorCont
 
 func (v *Visitor) VisitDeclaracionTipo(ctx *parser.DeclaracionTipoContext, ts Scope, generador *Generador) interface{} {
 	var pos int
-	heap := false
 	if ctx.LET() == nil {
 		var tipo int // Variable para almacenar el tipo de la variable
 		switch ctx.Tipo().GetText() {
 		case "String":
 			tipo = String
-			heap = true
 		case "Bool":
 			tipo = Bool
 		case "Character":
@@ -312,7 +311,7 @@ func (v *Visitor) VisitDeclaracionTipo(ctx *parser.DeclaracionTipoContext, ts Sc
 		case "Float":
 			tipo = Float
 		}
-		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, "nil", false, 0, heap, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope con valor nil
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, "nil", false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope con valor nil
 		if pos == -1 {
 			generador.Comentario("Error: La variable ya existe")
 			return Valor{}
@@ -335,16 +334,15 @@ func (v *Visitor) VisitDeclaracionTipo(ctx *parser.DeclaracionTipoContext, ts Sc
 func (v *Visitor) VisitDeclaracionValor(ctx *parser.DeclaracionValorContext, ts Scope, generador *Generador) interface{} {
 	expr := v.Visit(ctx.Expr(), ts, generador).(Valor) // Obtiene el valor de la expresión y su tipo
 	var pos int
-	heap := false
 	if expr.Tipo != Error {
 		constante := true
 		if ctx.LET() == nil {
 			constante = false
 		}
-		if expr.Tipo == String {
+		/* 		if expr.Tipo == String {
 			heap = true
-		}
-		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), expr.Tipo, expr.Valor, constante, 0, heap, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+		} */
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), expr.Tipo, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
 		generador.Comentario("Declaración de variable: " + ctx.ID().GetText())
 		generador.setStack(fmt.Sprint(pos), fmt.Sprint(expr.Valor))
 		generador.agregarCodigo("\n")
@@ -410,9 +408,11 @@ func (v *Visitor) VisitAsignacion(ctx *parser.AsignacionContext, ts Scope, gener
 				res = Valor{Valor: temp, Tipo: String}
 			} else if variable.(Variable).Tipo == Int && expr.Tipo == Int {
 				temp2 := generador.nuevoTemporal()
-				generador.getStack(temp, fmt.Sprint(variable.(Variable).Posicion))
-				generador.Expresion(temp2, "(int)"+temp, "+", "(int)"+fmt.Sprint(expr.Valor))
-				res = Valor{Valor: temp2, Tipo: Int}
+				temp3 := generador.nuevoTemporal()
+				generador.Expresion(temp2, "P", "+", fmt.Sprint(variable.(Variable).Posicion))
+				generador.getStack(temp, temp2)
+				generador.Expresion(temp3, "(int)"+temp, "+", "(int)"+fmt.Sprint(expr.Valor))
+				res = Valor{Valor: temp3, Tipo: Int}
 			} else if variable.(Variable).Tipo == Float && expr.Tipo == Float || (variable.(Variable).Tipo == Float && expr.Tipo == Int) || variable.(Variable).Tipo == Int && expr.Tipo == Float {
 				temp2 := generador.nuevoTemporal()
 				generador.getStack(temp, fmt.Sprint(variable.(Variable).Posicion))
@@ -502,7 +502,7 @@ func (v *Visitor) VisitPrint_instr(ctx *parser.Print_instrContext, ts Scope, gen
 			generador.Printf("c", "(int)", fmt.Sprintf("%v", valor.Valor))
 		} else if valor.Tipo == String {
 			generador.Comentario("Imprimir String")
-			generador.imprimirString()
+			generador.printStrFlag = true
 
 			temp := generador.nuevoTemporal()
 
@@ -760,7 +760,7 @@ func (v *Visitor) VisitFor(ctx *parser.For_instrContext, ts Scope, generador *Ge
 			fmt.Println(expr1.Valor, ", ", expr2.Valor)
 			//if expr1.Valor.(int) <= expr2.Valor.(int) { // La expresion 1 es menor que la expresion 2
 			generador.Comentario("Instrucción FOR")
-			pos := ts_for.agregarVariable(Variable{ctx.ID().GetText(), Int, expr1.Valor.(int), false, 0, false, "", "", ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+			pos := ts_for.agregarVariable(Variable{ctx.ID().GetText(), Int, expr1.Valor.(int), false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
 			if pos == -1 {
 				generador.Comentario("Error: La variable ya existe")
 				return Valor{}
@@ -1042,327 +1042,488 @@ func (v *Visitor) VisitStringCastExpr(ctx *parser.StringCastExprContext, ts Scop
 }
 
 func (v *Visitor) VisitFuncion(ctx *parser.FuncionContext, ts Scope, generador *Generador) interface{} {
-	/* 	if ctx.Tipo() != nil {
-	   		var tipo int // Variable para almacenar el tipo de la variable
-	   		switch ctx.Tipo().GetText() {
-	   		case "String":
-	   			tipo = String
-	   		case "Bool":
-	   			tipo = Bool
-	   		case "Character":
-	   			tipo = Character
-	   		case "Int":
-	   			tipo = Int
-	   		case "Float":
-	   			tipo = Float
-	   		}
-	   		return ts.agregarFuncion(Funcion{ctx.ID().GetText(), ctx.Parametros(), ctx.Block(), tipo, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
-	   	}
-	   	return ts.agregarFuncion(Funcion{ctx.ID().GetText(), ctx.Parametros(), ctx.Block(), Void, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
-	*/
-	return nil
+	var tipo int // Variable para almacenar el tipo de la variable
+	if ctx.Tipo() != nil {
+		switch ctx.Tipo().GetText() {
+		case "String":
+			tipo = String
+		case "Bool":
+			tipo = Bool
+		case "Character":
+			tipo = Character
+		case "Int":
+			tipo = Int
+		case "Float":
+			tipo = Float
+		}
+	} else {
+		tipo = Void
+	}
+	ts.agregarFuncion(Funcion{ctx.ID().GetText(), ctx.Parametros(), ctx.Block(), tipo, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+
+	Salida := generador.nuevaEtiqueta()
+	ts_func := NuevoScope(ts, fmt.Sprintf("Función '%v'", ctx.ID().GetText()))
+	ts_func.etqSalida = Salida
+	generador.inicioFuncion(ctx.ID().GetText())
+
+	//fmt.Println("parametros declarados: ", ctx.Parametros())
+	if ctx.Parametros() != nil {
+		// OBTENER EL PRIMER PARAMETRO
+		// ID externo
+		var id_externo string
+		var id_interno string
+		if ctx.Parametros().ID(1) != nil {
+			id_externo = ctx.Parametros().ID(0).GetText()
+			if id_externo == "_" {
+				id_externo = ""
+			}
+			id_interno = ctx.Parametros().ID(1).GetText()
+		} else {
+			id_externo = ""
+			id_interno = ctx.Parametros().ID(0).GetText()
+		}
+
+		TIPO := ctx.Parametros().Tipo()
+		var tipo int // Variable para almacenar el tipo de la variable
+		for TIPO != nil {
+			switch TIPO.GetText() {
+			case "String":
+				tipo = String
+			case "Bool":
+				tipo = Bool
+			case "Character":
+				tipo = Character
+			case "Int":
+				tipo = Int
+			case "Float":
+				tipo = Float
+			default:
+				tipo = 10
+			}
+			if tipo != 10 {
+				break
+			}
+			TIPO = TIPO.Tipo()
+		}
+
+		// Por referencia o por valor
+		/* 		if ctx.Parametros().INOUT() != nil { // POR REFERENCIA
+		   			// Agrega el parametro al scope de la funcion como constante
+		   			//ts_func.agregarVariablePorReferencia(id_interno, Variable{id_interno, tipo, 0, false, 0, ctx.Parametros().ID(0).GetSymbol().GetLine(), ctx.Parametros().ID(0).GetSymbol().GetColumn()})
+		   		} else {
+		   			// Agrego el parametro al scope de la funcion como variable
+		   			//ts_func.agregarVariable(Variable{id_interno, tipo, 0, false, 0, ctx.Parametros().ID(0).GetSymbol().GetLine(), ctx.Parametros().ID(0).GetSymbol().GetColumn()})
+		   		} */
+		ts_func.agregarParam(Variable{id_interno, tipo, 0, false, 0, ctx.Parametros().ID(0).GetSymbol().GetLine(), ctx.Parametros().ID(0).GetSymbol().GetColumn()})
+
+		params := ctx.Parametros()
+		/// OBTENER LOS PARAMETROS ANIDADOS
+		if params.Parametros() != nil {
+			for true {
+				// ID externo e interno
+				var id_externo string
+				var id_interno string
+				if params.Parametros().ID(1) != nil {
+					id_externo = params.Parametros().ID(0).GetText()
+					if id_externo == "_" {
+						id_externo = ""
+					}
+					id_interno = params.Parametros().ID(1).GetText()
+				} else {
+					id_externo = ""
+					id_interno = params.Parametros().ID(0).GetText()
+				}
+
+				TIPO := params.Parametros().Tipo()
+				var tipo int // Variable para almacenar el tipo de la variable
+				for TIPO != nil {
+					switch TIPO.GetText() {
+					case "String":
+						tipo = String
+					case "Bool":
+						tipo = Bool
+					case "Character":
+						tipo = Character
+					case "Int":
+						tipo = Int
+					case "Float":
+						tipo = Float
+					default:
+						tipo = 10
+					}
+					if tipo != 10 {
+						break
+					}
+					fmt.Println("PRINT TIPO:", TIPO.GetText())
+					TIPO = TIPO.Tipo()
+				}
+				/* 				// Por referencia o por valor
+				   				if params.Parametros().INOUT() != nil { // POR REFERENCIA
+				   					// Agrega el parametro al scope de la funcion como constante
+				   					ts_func.agregarVariablePorReferencia(id_interno, Variable{id_interno, tipo, 0, false, 0, params.ID(0).GetSymbol().GetLine(), params.ID(0).GetSymbol().GetColumn()})
+				   				} else {
+				   					// Agrego el parametro al scope de la funcion como variable
+				   					ts_func.agregarVariable(Variable{id_interno, tipo, 0, false, 0, params.ID(0).GetSymbol().GetLine(), params.ID(0).GetSymbol().GetColumn()})
+				   				} */
+				ts_func.agregarParam(Variable{id_interno, tipo, 0, false, 0, params.ID(0).GetSymbol().GetLine(), params.ID(0).GetSymbol().GetColumn()})
+
+				params = params.Parametros()
+				if params.Parametros() == nil {
+					break
+				}
+			}
+		}
+	}
+	// // NO SE QUE HACE ESTO
+	// /*         for (Object item: this.listInstructions) {
+
+	//            if (item instanceof CallFunction){
+	//                ((Instruction) item).compile(newTable);
+	//            }
+
+	//            ((Instruction) item).compile(newTable);
+	//        } */
+	//v.Visit(ctx.Block(), ts, generador)
+	ts_funciones[ctx.ID().GetText()] = ts_func
+	v.Visit(ctx.Block(), ts_func, generador)
+	generador.imprimirEtiqueta(Salida)
+	generador.finFuncion()
+	return Valor{}
 }
 
 func (v *Visitor) VisitLlamada_func(ctx *parser.Llamada_funcContext, ts Scope, generador *Generador) interface{} {
-	/* 	funcion := ts.encontrarFuncion(ctx.ID().GetText())
-	   	if funcion.ID != "" {
-	   		ts_func := NuevoScope(ts, fmt.Sprintf("Función '%v'", ctx.ID().GetText()))
+	funcion := ts.encontrarFuncion(ctx.ID().GetText())
+	if funcion.ID != "" {
+		ts_func := ts_funciones[ctx.ID().GetText()] // NuevoScope(ts, fmt.Sprintf("Función '%v'", ctx.ID().GetText()))
+		fmt.Println("ts_func: ", ts_func)
+		// ----------------------OBTENER LOS PARAMETROS DE LA LLAMADA DE LA FUNCION---------------------------------------
+		// El atributo 'Constante' hara referencia a si es por referencia o por valor
+		var parametros_llamada []Variable
+		params_llamada := ctx.Parametros_llamada()
 
-	   		// ----------------------OBTENER LOS PARAMETROS DE LA LLAMADA DE LA FUNCION---------------------------------------
+		if params_llamada != nil {
+			// OBTENER EL PRIMER PARAMETRO
+			// ID
+			var id string
+			if params_llamada.ID() != nil {
+				id = params_llamada.ID().GetText()
+			} else {
+				id = params_llamada.Expr().GetText()
+			}
+			//  Valor y tipo
+			expr := v.Visit(params_llamada.Expr(), ts, generador).(Valor)
 
-	   		var parametros_llamada []Variable // En este caso el atributo 'Constante' hara referencia a si es por referencia o por valor
-	   		params_llamada := ctx.Parametros_llamada()
-	   		// OBTENER EL PRIMER PARAMETRO
-	   		// ID
-	   		var id string
-	   		if params_llamada.ID() != nil {
-	   			id = params_llamada.ID().GetText()
-	   		} else {
-	   			id = params_llamada.Expr().GetText()
-	   		}
-	   		//  Valor y tipo
-	   		expr := v.Visit(params_llamada.Expr(), ts, generador)
+			// Por referencia o por valor
+			if params_llamada.REF() != nil {
+				// POR REFERENCIA
+				parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+			} else {
+				// POR VALOR
+				parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, true, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+			}
 
-	   		// Por referencia o por valor
-	   		if params_llamada.REF() != nil { // POR REFERENCIA
-	   			parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, false, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
-	   		} else {
-	   			parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, true, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
-	   		}
+			/// OBTENER LOS PARAMETROS ANIDADOS
+			if params_llamada.Parametros_llamada() != nil {
+				for true {
+					// ID
+					var id string
+					if params_llamada.Parametros_llamada().ID() != nil {
+						id = params_llamada.Parametros_llamada().ID().GetText()
+					} else {
+						id = params_llamada.Parametros_llamada().Expr().GetText()
+					}
+					//  Valor y tipo
+					expr := v.Visit(params_llamada.Parametros_llamada().Expr(), ts, generador).(Valor)
 
-	   		/// OBTENER LOS PARAMETROS ANIDADOS
-	   		if params_llamada.Parametros_llamada() != nil {
-	   			for true {
-	   				// ID
-	   				var id string
-	   				if params_llamada.Parametros_llamada().ID() != nil {
-	   					id = params_llamada.Parametros_llamada().ID().GetText()
-	   				} else {
-	   					id = params_llamada.Parametros_llamada().Expr().GetText()
-	   				}
-	   				//  Valor y tipo
-	   				expr := v.Visit(params_llamada.Parametros_llamada().Expr(), ts, generador)
+					// Por referencia o por valor
+					if params_llamada.Parametros_llamada().REF() != nil { // POR REFERENCIA
+						// Agrega el parametro al scope de la funcion como constante
+						parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
 
-	   				// Por referencia o por valor
-	   				if params_llamada.Parametros_llamada().REF() != nil { // POR REFERENCIA
-	   					// Agrega el parametro al scope de la funcion como constante
-	   					parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, false, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+					} else {
+						// Agrego el parametro al scope de la funcion como variable
+						parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, true, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+					}
+					params_llamada = params_llamada.Parametros_llamada()
+					if params_llamada.Parametros_llamada() == nil {
+						break
+					}
+				}
+			}
+		}
 
-	   				} else {
-	   					// Agrego el parametro al scope de la funcion como variable
-	   					parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, true, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
-	   				}
-	   				params_llamada = params_llamada.Parametros_llamada()
-	   				if params_llamada.Parametros_llamada() == nil {
-	   					break
-	   				}
-	   			}
-	   		}
+		// ----------------------OBTENER LOS PARAMETROS DE LA DECLARACION DE LA FUNCION-----------------------------------
 
-	   		// ----------------------OBTENER LOS PARAMETROS DE LA DECLARACION DE LA FUNCION-----------------------------------
+		var parametros_declarados []Parametro
 
-	   		var parametros_declarados []Parametro
+		if funcion.Parametros != nil {
+			// OBTENER EL PRIMER PARAMETRO
+			// ID externo
+			var id_externo string
+			var id_interno string
+			if funcion.Parametros.ID(1) != nil {
+				id_externo = funcion.Parametros.ID(0).GetText()
+				if id_externo == "_" {
+					id_externo = ""
+				}
+				id_interno = funcion.Parametros.ID(1).GetText()
+			} else {
+				id_externo = ""
+				id_interno = funcion.Parametros.ID(0).GetText()
+			}
 
-	   		// OBTENER EL PRIMER PARAMETRO
-	   		// ID externo
-	   		var id_externo string
-	   		var id_interno string
-	   		if funcion.Parametros.ID(1) != nil {
-	   			id_externo = funcion.Parametros.ID(0).GetText()
-	   			if id_externo == "_" {
-	   				id_externo = ""
-	   			}
-	   			id_interno = funcion.Parametros.ID(1).GetText()
-	   		} else {
-	   			id_externo = ""
-	   			id_interno = funcion.Parametros.ID(0).GetText()
-	   		}
+			TIPO := funcion.Parametros.Tipo()
+			var tipo int // Variable para almacenar el tipo de la variable
+			for TIPO != nil {
+				switch TIPO.GetText() {
+				case "String":
+					tipo = String
+				case "Bool":
+					tipo = Bool
+				case "Character":
+					tipo = Character
+				case "Int":
+					tipo = Int
+				case "Float":
+					tipo = Float
+				default:
+					tipo = 10
+				}
+				if tipo != 10 {
+					break
+				}
+				TIPO = TIPO.Tipo()
+			}
 
-	   		TIPO := funcion.Parametros.Tipo()
-	   		var tipo int // Variable para almacenar el tipo de la variable
-	   		for TIPO != nil {
-	   			switch TIPO.GetText() {
-	   			case "String":
-	   				tipo = String
-	   			case "Bool":
-	   				tipo = Bool
-	   			case "Character":
-	   				tipo = Character
-	   			case "Int":
-	   				tipo = Int
-	   			case "Float":
-	   				tipo = Float
-	   			default:
-	   				tipo = 10
-	   			}
-	   			if tipo != 10 {
-	   				break
-	   			}
-	   			TIPO = TIPO.Tipo()
-	   		}
+			// Por referencia o por valor
+			if funcion.Parametros.INOUT() != nil { // POR REFERENCIA
+				// Agrega el parametro al scope de la funcion como constante
+				parametros_declarados = append(parametros_declarados, Parametro{id_externo, id_interno, tipo, false})
+			} else {
+				// Agrego el parametro al scope de la funcion como variable
+				parametros_declarados = append(parametros_declarados, Parametro{id_externo, id_interno, tipo, true})
+			}
 
-	   		// Por referencia o por valor
-	   		if funcion.Parametros.INOUT() != nil { // POR REFERENCIA
-	   			// Agrega el parametro al scope de la funcion como constante
-	   			parametros_declarados = append(parametros_declarados, Parametro{id_externo, id_interno, tipo, false})
-	   		} else {
-	   			// Agrego el parametro al scope de la funcion como variable
-	   			parametros_declarados = append(parametros_declarados, Parametro{id_externo, id_interno, tipo, true})
-	   		}
+			/// OBTENER LOS PARAMETROS ANIDADOS
+			if funcion.Parametros.Parametros() != nil {
+				for true {
+					// ID externo e interno
+					var id_externo string
+					var id_interno string
+					if funcion.Parametros.Parametros().ID(1) != nil {
+						id_externo = funcion.Parametros.Parametros().ID(0).GetText()
+						if id_externo == "_" {
+							id_externo = ""
+						}
+						id_interno = funcion.Parametros.Parametros().ID(1).GetText()
+					} else {
+						id_externo = ""
+						id_interno = funcion.Parametros.Parametros().ID(0).GetText()
+					}
 
-	   		/// OBTENER LOS PARAMETROS ANIDADOS
-	   		if funcion.Parametros.Parametros() != nil {
-	   			for true {
-	   				// ID externo e interno
-	   				var id_externo string
-	   				var id_interno string
-	   				if funcion.Parametros.Parametros().ID(1) != nil {
-	   					id_externo = funcion.Parametros.Parametros().ID(0).GetText()
-	   					if id_externo == "_" {
-	   						id_externo = ""
-	   					}
-	   					id_interno = funcion.Parametros.Parametros().ID(1).GetText()
-	   				} else {
-	   					id_externo = ""
-	   					id_interno = funcion.Parametros.Parametros().ID(0).GetText()
-	   				}
+					TIPO := funcion.Parametros.Parametros().Tipo()
+					var tipo int // Variable para almacenar el tipo de la variable
+					for TIPO != nil {
+						switch TIPO.GetText() {
+						case "String":
+							tipo = String
+						case "Bool":
+							tipo = Bool
+						case "Character":
+							tipo = Character
+						case "Int":
+							tipo = Int
+						case "Float":
+							tipo = Float
+						default:
+							tipo = 10
+						}
+						if tipo != 10 {
+							break
+						}
+						fmt.Println("PRINT TIPO:", TIPO.GetText())
+						TIPO = TIPO.Tipo()
+					}
+					// Por referencia o por valor
+					if funcion.Parametros.Parametros().INOUT() != nil { // POR REFERENCIA
+						// Agrega el parametro al scope de la funcion como constante
+						parametros_declarados = append(parametros_declarados, Parametro{id_externo, id_interno, tipo, false})
+					} else {
+						// Agrego el parametro al scope de la funcion como variable
+						parametros_declarados = append(parametros_declarados, Parametro{id_externo, id_interno, tipo, true})
+					}
 
-	   				TIPO := funcion.Parametros.Parametros().Tipo()
-	   				var tipo int // Variable para almacenar el tipo de la variable
-	   				for TIPO != nil {
-	   					switch TIPO.GetText() {
-	   					case "String":
-	   						tipo = String
-	   					case "Bool":
-	   						tipo = Bool
-	   					case "Character":
-	   						tipo = Character
-	   					case "Int":
-	   						tipo = Int
-	   					case "Float":
-	   						tipo = Float
-	   					default:
-	   						tipo = 10
-	   					}
-	   					if tipo != 10 {
-	   						break
-	   					}
-	   					fmt.Println("PRINT TIPO:", TIPO.GetText())
-	   					TIPO = TIPO.Tipo()
-	   				}
-	   				// Por referencia o por valor
-	   				if funcion.Parametros.Parametros().INOUT() != nil { // POR REFERENCIA
-	   					// Agrega el parametro al scope de la funcion como constante
-	   					parametros_declarados = append(parametros_declarados, Parametro{id_externo, id_interno, tipo, false})
-	   				} else {
-	   					// Agrego el parametro al scope de la funcion como variable
-	   					parametros_declarados = append(parametros_declarados, Parametro{id_externo, id_interno, tipo, true})
-	   				}
+					funcion.Parametros = funcion.Parametros.Parametros()
+					if funcion.Parametros.Parametros() == nil {
+						break
+					}
+				}
+			}
+		}
 
-	   				funcion.Parametros = funcion.Parametros.Parametros()
-	   				if funcion.Parametros.Parametros() == nil {
-	   					break
-	   				}
-	   			}
-	   		}
+		// ----------------------COMPARAR LOS PARAMETROS DE LA LLAMADA CON LOS DE LA DECLARACION---------------------------
+		referencia := false
+		if parametros_declarados != nil && parametros_llamada != nil {
+			// Verifica que la cantidad de parametros sea la misma
+			if eq_size := len(parametros_declarados) == len(parametros_llamada); eq_size {
+				for i := 0; i < len(parametros_declarados); i++ {
+					// Verifica que los tipos coincidan en orden
+					if parametros_declarados[i].Tipo != parametros_llamada[i].Tipo {
+						listaErrores = append(listaErrores, Error_{
+							Tipo:    "SEMANTICO",
+							Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+							Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+							Mensaje: fmt.Sprintf("El tipo del parametro '%v' de la función '%v' no coincide con el de la llamada '%v'\n> %v\n", parametros_declarados[i].ID_Interno, funcion.ID, parametros_llamada[i].ID, parametros_llamada[i].Valor),
+						})
+						return Valor{}
+					}
+					// Verifica que los parametros de referecia declaradas si vengan por referencia en la llamada
+					if condition := parametros_declarados[i].Referencia && !parametros_llamada[i].Constante; condition {
+						listaErrores = append(listaErrores, Error_{
+							Tipo:    "SEMANTICO",
+							Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+							Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+							Mensaje: fmt.Sprintf("El parametro '%v' de la función '%v' debe ser por referencia\n", parametros_llamada[i].ID, funcion.ID),
+						})
+						return Valor{}
+					} else if condition := !parametros_declarados[i].Referencia && parametros_llamada[i].Constante; condition {
+						listaErrores = append(listaErrores, Error_{
+							Tipo:    "SEMANTICO",
+							Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+							Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+							Mensaje: fmt.Sprintf("El parametro '%v' de la función '%v' debe ser por valor\n", parametros_llamada[i].ID, funcion.ID),
+						})
+						return Valor{}
+					}
+					// Verifica que si viene un id externo en la declaracion, este sea igual al de la llamada
+					if parametros_declarados[i].ID_Externo != "" {
+						if parametros_declarados[i].ID_Externo != parametros_llamada[i].ID {
+							listaErrores = append(listaErrores, Error_{
+								Tipo:    "SEMANTICO",
+								Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+								Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+								Mensaje: fmt.Sprintf("El id externo del parametro '%v' no coincide con el de la llamada '%v'\n", parametros_declarados[i].ID_Externo, parametros_llamada[i].ID),
+							})
+							return Valor{}
+						}
+					}
+					// Verifica que el id interno no se repita en la declaracion
+					seen := make(map[string]Parametro) // Crea un mapa para realizar un seguimiento de la cantidad de veces que se repite un id
+					// Recorrer el slice
+					for _, param := range parametros_declarados {
+						// Verificar si el elemento ya se encuentra en el map
+						if _, exists := seen[param.ID_Interno]; exists {
+							listaErrores = append(listaErrores, Error_{
+								Tipo:    "SEMANTICO",
+								Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+								Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+								Mensaje: fmt.Sprintf("El parámetro %v se repite en la declaración de la función '%v'\n", param.ID_Interno, funcion.ID),
+							})
+							return Valor{}
+						} else {
+							// Si no se ha visto antes, registrar su aparición
+							seen[param.ID_Interno] = param
+						}
+					}
+				}
+			} else {
+				listaErrores = append(listaErrores, Error_{
+					Tipo:    "SEMANTICO",
+					Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+					Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+					Mensaje: fmt.Sprintf("La cantidad de parametros '%v' en la declaración de la función '%v' no coincide con los de la llamada '%v'\n", len(parametros_declarados), funcion.ID, len(parametros_llamada)),
+				})
+				return Valor{}
+			}
 
-	   		// ----------------------COMPARAR LOS PARAMETROS DE LA LLAMADA CON LOS DE LA DECLARACION---------------------------
+			// ------------------------------AGREGAR LOS PARAMETROS AL AMBITO DE LA FUNCION--------------------------------------
+			var count int = 0
+			generador.Comentario("DECLARACION DE PARAMETROS DE LA FUNCION " + funcion.ID)
+			for i := 0; i < len(parametros_declarados); i++ {
 
-	   		// Verifica que la cantidad de parametros sea la misma
-	   		if eq_size := len(parametros_declarados) == len(parametros_llamada); eq_size {
-	   			for i := 0; i < len(parametros_declarados); i++ {
-	   				// Verifica que los tipos que los tipos coincidan en orden
-	   				if parametros_declarados[i].Tipo != parametros_llamada[i].Tipo {
-	   					listaErrores = append(listaErrores, Error_{
-	   						Tipo:    "SEMANTICO",
-	   						Linea:   "",
-	   						Columna: "",
-	   						Mensaje: fmt.Sprintf("El tipo del parametro '%v' de la función '%v' no coincide con el de la llamada '%v'\n       > %v\n", parametros_declarados[i].ID_Interno, funcion.ID, parametros_llamada[i].ID, parametros_llamada[i].Valor),
-	   					})
-	   					return Valor{Valor: fmt.Sprintf("Error: El tipo del parametro '%v' de la función '%v' no coincide con el de la llamada '%v'\n       > %v\n", parametros_declarados[i].ID_Interno, funcion.ID, parametros_llamada[i].ID, parametros_llamada[i].Valor), Tipo: Error}
-	   				}
-	   				// Verifica que los parametros de referecia declaradas si vengan por referencia en la llamada
-	   				if condition := parametros_declarados[i].Referencia && !parametros_llamada[i].Constante; condition {
-	   					listaErrores = append(listaErrores, Error_{
-	   						Tipo:    "SEMANTICO",
-	   						Linea:   "",
-	   						Columna: "",
-	   						Mensaje: fmt.Sprintf("El parametro '%v' de la función '%v' debe ser por referencia\n", parametros_llamada[i].ID, funcion.ID),
-	   					})
-	   					return Valor{Valor: fmt.Sprintf("Error: El parametro '%v' de la función '%v' debe ser por referencia\n", parametros_llamada[i].ID, funcion.ID), Tipo: Error}
-	   				} else if condition := !parametros_declarados[i].Referencia && parametros_llamada[i].Constante; condition {
-	   					listaErrores = append(listaErrores, Error_{
-	   						Tipo:    "SEMANTICO",
-	   						Linea:   "",
-	   						Columna: "",
-	   						Mensaje: fmt.Sprintf("El parametro '%v' de la función '%v' debe ser por valor\n", parametros_llamada[i].ID, funcion.ID),
-	   					})
-	   					return Valor{Valor: fmt.Sprintf("Error: El parametro '%v' de la función '%v' debe ser por valor\n", parametros_llamada[i].ID, funcion.ID), Tipo: Error}
-	   				}
-	   				// Verifica que si viene un id externo en la declaracion, este sea igual al de la llamada
-	   				if parametros_declarados[i].ID_Externo != "" {
-	   					if parametros_declarados[i].ID_Externo != parametros_llamada[i].ID {
-	   						listaErrores = append(listaErrores, Error_{
-	   							Tipo:    "SEMANTICO",
-	   							Linea:   "",
-	   							Columna: "",
-	   							Mensaje: fmt.Sprintf("El id externo del parametro '%v' no coincide con el de la llamada '%v'\n", parametros_declarados[i].ID_Externo, parametros_llamada[i].ID),
-	   						})
-	   						return Valor{Valor: fmt.Sprintf("Error: El id externo del parametro '%v' no coincide con el de la llamada '%v'\n", parametros_declarados[i].ID_Externo, parametros_llamada[i].ID), Tipo: Error}
-	   					}
-	   				}
-	   				// Verificaerifica que el id interno no se repita en la declaracion
-	   				seen := make(map[string]Parametro) // Crea un mapa para realizar un seguimiento de la cantidad de veces que se repite un id
-	   				// Recorrer el slice
-	   				for _, param := range parametros_declarados {
-	   					// Verificar si el elemento ya se encuentra en el map
-	   					if _, exists := seen[param.ID_Interno]; exists {
-	   						listaErrores = append(listaErrores, Error_{
-	   							Tipo:    "SEMANTICO",
-	   							Linea:   "",
-	   							Columna: "",
-	   							Mensaje: fmt.Sprintf("El parámetro %v se repite en la declaración de la función '%v'\n", param.ID_Interno, funcion.ID),
-	   						})
-	   						return Valor{Valor: fmt.Sprintf("Error: El parámetro %v se repite en la declaración de la función '%v'\n", param.ID_Interno, funcion.ID), Tipo: Error}
-	   					} else {
-	   						// Si no se ha visto antes, registrar su aparición
-	   						seen[param.ID_Interno] = param
-	   					}
-	   				}
-	   			}
-	   		} else {
-	   			listaErrores = append(listaErrores, Error_{
-	   				Tipo:    "SEMANTICO",
-	   				Linea:   "",
-	   				Columna: "",
-	   				Mensaje: fmt.Sprintf("La cantidad de parametros '%v' en la declaración de la función '%v' no coincide con los de la llamada '%v'\n", len(parametros_declarados), funcion.ID, len(parametros_llamada)),
-	   			})
-	   			return Valor{Valor: fmt.Sprintf("Error: La cantidad de parametros '%v' en la declaración de la función '%v' no coincide con los de la llamada '%v'\n", len(parametros_declarados), funcion.ID, len(parametros_llamada)), Tipo: Error}
-	   		}
+				if !parametros_llamada[i].Constante { //Si es por referencia
+					referencia = true
+				}
+				generador.Comentario("Declaración de variable: " + parametros_declarados[i].ID_Interno)
+				posicion := generador.nuevoTemporal()
+				generador.Expresion(posicion, "P", "+", fmt.Sprint(ts.Size["Size"]+count))
+				generador.setStack(posicion, fmt.Sprint(parametros_llamada[i].Valor))
+				generador.agregarCodigo("\n")
+				count++
+			}
+			generador.Comentario("FIN DECLARACION DE PARAMETROS")
+		}
 
-	   		// ------------------------------AGREGAR LOS PARAMETROS AL AMBITO DE LA FUNCION--------------------------------------
+		// -----------------------------------------EJECUTAR EL BLOQUE DE LA FUNCION-----------------------------------------
 
-	   		for i := 0; i < len(parametros_declarados); i++ {
-	   			if !parametros_llamada[i].Constante { //Si es por referencia
-	   				ts_func.agregarVariablePorReferencia(parametros_declarados[i].ID_Interno, Variable{parametros_llamada[i].ID, parametros_declarados[i].Tipo, parametros_llamada[i].Valor, parametros_llamada[i].Constante, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
-	   			} else {
-	   				ts_func.agregarVariable(Variable{parametros_declarados[i].ID_Interno, parametros_declarados[i].Tipo, parametros_llamada[i].Valor, parametros_llamada[i].Constante, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
-	   			}
-	   		}
+		generador.Comentario("LLAMADA A LA FUNCION: " + funcion.ID)
+		value := generador.nuevoTemporal()
+		if !referencia {
+			generador.nuevoAmbito(fmt.Sprint(ts.Size["Size"]))
+		} else {
+			generador.nuevoAmbito(fmt.Sprint(ts.Size["Size"] - 1))
+		}
+		generador.getFuncion(funcion.ID)
+		generador.Comentario("Valor de retorno")
+		generador.getStack(value, "P")
+		if !referencia {
+			generador.getAmbito(fmt.Sprint(ts.Size["Size"]))
+		} else {
+			generador.getAmbito(fmt.Sprint(ts.Size["Size"] - 1))
+		}
+		//generador.getStack(value, "P")
+		generador.Comentario("FIN LLAMADA")
 
-	   		// -----------------------------------------EJECUTAR EL BLOQUE DE LA FUNCION-----------------------------------------
+		if funcion.TipoReturn == Void {
 
-	   		if funcion.TipoReturn == Void {
-	   			retorno := v.Visit(funcion.Bloque, ts_func)
-	   			//fmt.Println("Retorno EN FUNCION VOID: ", retorno.ReturnVal)
-	   			fmt.Println("TABLA DE SIMBOLOS FUNCION:", ts_func.Nombre, ts_func.Variables)
-	   			fmt.Println("TABLA DE SIMBOLOS TS:", ts.Nombre, ts.Variables)
-	   			if retorno.ReturnVal == nil {
-	   				// Si los parametros son por referencia, actualizar los valores en el scope padre
-	   				for _, valor := range ts_func.Variables {
-	   					if !valor.Constante {
-	   						ts.cambiarValPorReferencia(valor.ID, valor.Valor)
-	   						fmt.Println("-----------SE MODIFICO LA VARIABLE------------------------->", valor.ID)
-	   						fmt.Println("TABLA DE SIMBOLOS MODIFICADA TS:", ts.Nombre, ts.Variables)
-	   					}
-	   				}
-	   				return retorno
-	   			}
-	   			return Valor{Valor: "Error: La función no debe tener un valor de retorno\n", Tipo: Error}
+			//retorno := v.Visit(funcion.Bloque, ts_func, generador)
 
-	   		} else {
-	   			retorno := v.Visit(funcion.Bloque, ts_func)
-	   			//fmt.Println("Retorno EN FUNCION: ", retorno.ReturnVal, retorno.ReturnTipo)
-	   			if retorno.ReturnTipo == Void {
-	   				listaErrores = append(listaErrores, Error_{
-	   					Tipo:    "SEMANTICO",
-	   					Linea:   "",
-	   					Columna: "",
-	   					Mensaje: fmt.Sprintf("La función '%v' debe tener un valor de retorno\n", funcion.ID),
-	   				})
-	   				return Valor{Valor: fmt.Sprintf("Error: La función '%v' debe tener un valor de retorno\n", funcion.ID), Tipo: Error}
-	   			} else if retorno.ReturnTipo == funcion.TipoReturn {
-	   				return Valor{Valor: retorno.ReturnVal, Tipo: retorno.ReturnTipo, ReturnVal: retorno.ReturnVal, ReturnTipo: retorno.ReturnTipo, Return: true}
-	   			} else {
-	   				listaErrores = append(listaErrores, Error_{
-	   					Tipo:    "SEMANTICO",
-	   					Linea:   "",
-	   					Columna: "",
-	   					Mensaje: fmt.Sprintf("El tipo de la expresión de retorno no coincide con el tipo de la función:  '%v'\n", funcion.ID),
-	   				})
-	   				return Valor{Valor: fmt.Sprintf("Error: El tipo de la expresión de retorno no coincide con el tipo de la función:  '%v'\n", funcion.ID), Tipo: Error}
-	   			}
-	   		}
-	   	}
+			//fmt.Println("TABLA DE SIMBOLOS FUNCION:", ts_func.Nombre, ts_func.Variables)
+			//fmt.Println("TABLA DE SIMBOLOS TS:", ts.Nombre, ts.Variables)
+			/* 			if retorno.(Valor).ReturnVal == nil {
+				// Si los parametros son por referencia, actualizar los valores en el scope padre
+				for _, valor := range ts_func.Variables {
+					if !valor.Constante {
+						ts.cambiarValPorReferencia(valor.ID, valor.Valor)
+						//fmt.Println("-----------SE MODIFICO LA VARIABLE------------------------->", valor.ID)
+						//fmt.Println("TABLA DE SIMBOLOS MODIFICADA TS:", ts.Nombre, ts.Variables)
+					}
+				}
+				return retorno
+			}
+			listaErrores = append(listaErrores, Error_{
+				Tipo:    "SEMANTICO",
+				Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+				Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+				Mensaje: fmt.Sprintf("La función '%v' no debe tener un valor de retorno\n", funcion.ID),
+			})*/
+			return Valor{}
 
-	   	listaErrores = append(listaErrores, Error_{
-	   		Tipo:    "SEMANTICO",
-	   		Linea:   "",
-	   		Columna: "",
-	   		Mensaje: fmt.Sprintf("No existe la función %s", ctx.ID().GetText()),
-	   	}) */
-	return Valor{Valor: fmt.Sprintf("Error: No existe la función %s", ctx.ID().GetText()), Tipo: Error}
-
+		} else {
+			return Valor{Valor: value, Tipo: funcion.TipoReturn}
+			/* 			retorno := v.Visit(funcion.Bloque, ts_func, generador)
+			   			if retorno.ReturnTipo == Void {
+			   				listaErrores = append(listaErrores, Error_{
+			   					Tipo:    "SEMANTICO",
+			   					Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+			   					Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+			   					Mensaje: fmt.Sprintf("La función '%v' debe tener un valor de retorno\n", funcion.ID),
+			   				})
+			   				return Valor{}
+			   			} else if retorno.ReturnTipo == funcion.TipoReturn {
+			   				return Valor{Valor: retorno.ReturnVal, Tipo: retorno.ReturnTipo, ReturnVal: retorno.ReturnVal, ReturnTipo: retorno.ReturnTipo, Return: true}
+			   			} else {
+			   				listaErrores = append(listaErrores, Error_{
+			   					Tipo:    "SEMANTICO",
+			   					Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+			   					Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+			   					Mensaje: fmt.Sprintf("El tipo de la expresión de retorno no coincide con el tipo de la función:  '%v'\n", funcion.ID),
+			   				})
+			   				return Valor{}
+			   			} */
+		}
+	}
+	return Valor{}
 }
 
 func (v *Visitor) VisitLlamadaFuncExpr(ctx *parser.LlamadaFuncExprContext, ts Scope, generador *Generador) interface{} {
@@ -2079,6 +2240,7 @@ func main() {
 		eval := Visitor{}
 		ts := Scope{Variables: make(map[string]Variable), Nombre: "Global", Anterior: nil, Funciones: make(map[string]Funcion), Size: make(map[string]int)}
 		generador := Generador{}
+		ts_funciones = make(map[string]Scope)
 		eval.Visit(tree, ts, &generador)
 		res := generador.crearCodigoFinal()
 		tablaSimbolos = ts

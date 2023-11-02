@@ -40,6 +40,9 @@ float H;		//Puntero del Heap
 			if i < g.Temporal {
 				encabezado += ", "
 			}
+			if i%10 == 0 {
+				encabezado += "\n"
+			}
 		}
 		encabezado += ";	//Temporales\n\n"
 	}
@@ -49,6 +52,9 @@ float H;		//Puntero del Heap
 
 // Generador del Codigo Final
 func (g *Generador) crearCodigoFinal() string {
+	if g.printStrFlag {
+		g.imprimirString()
+	}
 	codigo := g.crearEncabezado()
 	codigo += g.CodigoFuncion
 	codigo += "\nint main(){\n"
@@ -76,7 +82,7 @@ func (g *Generador) imprimirEtiqueta(etiqueta string) {
 
 func (g *Generador) inicioFuncion(nombre string) {
 	g.esFuncion = true
-	g.CodigoFuncion += fmt.Sprint("void ", nombre, "() {\n")
+	g.CodigoFuncion += fmt.Sprint("\nvoid ", nombre, "() {\n")
 }
 
 func (g *Generador) finFuncion() {
@@ -144,13 +150,6 @@ func (g *Generador) Comentario(comentario string) {
 }
 
 func (g *Generador) imprimirString() {
-	if g.printStrFlag {
-		return
-	}
-
-	g.printStrFlag = true
-	//this.esFuncion = true;
-
 	g.inicioFuncion("imprimirString")
 	salida := g.nuevaEtiqueta()
 	ciclo := g.nuevaEtiqueta()
@@ -170,5 +169,4 @@ func (g *Generador) imprimirString() {
 	g.Goto(ciclo)
 	g.imprimirEtiqueta(salida)
 	g.finFuncion()
-	//g.isFuncion = false;
 }
