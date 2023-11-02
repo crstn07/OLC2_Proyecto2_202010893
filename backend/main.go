@@ -970,61 +970,109 @@ func (v *Visitor) VisitParExpr(ctx *parser.ParExprContext, ts Scope, generador *
 }
 
 func (v *Visitor) VisitIntCastExpr(ctx *parser.IntCastExprContext, ts Scope, generador *Generador) interface{} {
-	/* expr := v.Visit(ctx.Expr(), ts, generador)
+	expr := v.Visit(ctx.Expr(), ts, generador).(Valor)
 	if expr.Tipo == Int {
 		return Valor{Valor: expr.Valor, Tipo: Int}
 	}
 	if expr.Tipo == Float {
-		return Valor{Valor: int(expr.Valor.(float64)), Tipo: Int}
+		return Valor{Valor: expr.Valor, Tipo: Int}
 	}
 	if expr.Tipo == String {
-		entero, err := strconv.Atoi(expr.Valor.(string))
-		if err == nil {
-			return Valor{Valor: entero, Tipo: Int}
-		}
-		decimal, err := strconv.ParseFloat(expr.Valor.(string), 64)
-		if err == nil {
-			entero = int(decimal)
-			return Valor{Valor: entero, Tipo: Int}
-		}
-		listaErrores = append(listaErrores, Error_{
-			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
-			Mensaje: fmt.Sprintf("No se puede convertir la expresion '%v' a Int", expr.Valor),
-		})
-		return Valor{Valor: "nil", Tipo: Int}
+		generador.Comentario("Casteo de String a Int")
+		temp1 := generador.nuevoTemporal() //pos en heap de inicio del numero
+		temp2 := generador.nuevoTemporal() //temp generado para almacenar el numero casteado
+		temp3 := generador.nuevoTemporal() //temp generado para almacenar el valor leido del heap
+		ciclo := generador.nuevaEtiqueta()
+		salida := generador.nuevaEtiqueta()
+		generador.Expresion(temp1, fmt.Sprint(expr.Valor), "", "")
+		generador.Expresion(temp2, "H", "", "") //temp2 = H
+		generador.setHeap("H", "0")             //almacena en el heap el numero 0
+		generador.imprimirEtiqueta(ciclo)
+		generador.getHeap(temp3, temp1)              //temp3 = valor leido del heap
+		generador.If(temp3, "==", "-1", salida)      //si es -1, termina el ciclo
+		temp4 := generador.nuevoTemporal()           //temp generado para almacenar el valor numerico del caracter
+		generador.Expresion(temp4, temp3, "-", "48") //se resta 48 para obtener su valor numerico, no ascii
+		temp5 := generador.nuevoTemporal()           //temp generado para obtener el valor guardado
+		generador.getHeap(temp5, "H")                //temp5 = valor guardado en el heap
+		temp6 := generador.nuevoTemporal()
+		generador.Expresion(temp6, temp5, "*", "10")  //multiplica el valor guardado * 10
+		generador.Expresion(temp6, temp6, "+", temp4) //suma el valor guardado * 10 + el valor numerico del caracter
+		generador.setHeap("H", temp6)                 //guarda el nuevo numero en el heap
+		generador.Expresion(temp1, temp1, "+", "1")   //avanza al siguiente caracter
+		generador.Goto(ciclo)
+		generador.imprimirEtiqueta(salida)
+		generador.nextHeap()
+		generador.getHeap(temp2, temp2)
+		generador.Comentario("Fin casteo de String a Int\n")
+		return Valor{Valor: temp2, Tipo: Int}
 	}
 	listaErrores = append(listaErrores, Error_{
 		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
+		Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+		Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 		Mensaje: fmt.Sprintf("No se puede convertir la expresion '%v' a Int", expr.Valor),
 	})
-	return Valor{Valor: "nil", Tipo: Int} */
-	return nil
+	return Valor{}
 }
 
 func (v *Visitor) VisitFloatCastExpr(ctx *parser.FloatCastExprContext, ts Scope, generador *Generador) interface{} {
-	/* expr := v.Visit(ctx.Expr(), ts, generador)
+	expr := v.Visit(ctx.Expr(), ts, generador).(Valor)
 	if expr.Tipo == Float {
 		return Valor{Valor: expr.Valor, Tipo: Float}
 	}
 	if expr.Tipo == Int {
-		return Valor{Valor: float64(expr.Valor.(int)), Tipo: Float}
+		return Valor{Valor: expr.Valor, Tipo: Float}
 	}
 	if expr.Tipo == String {
-		decimal, err := strconv.ParseFloat(expr.Valor.(string), 64)
-		if err == nil {
-			return Valor{Valor: decimal, Tipo: Float}
-		}
-		listaErrores = append(listaErrores, Error_{
-			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
-			Mensaje: fmt.Sprintf("No se puede convertir la expresion '%v' a Float", expr.Valor),
-		})
-		return Valor{Valor: "nil", Tipo: Int}
+		generador.Comentario("Casteo de String a Float")
+		temp1 := generador.nuevoTemporal() //pos en heap de inicio del numero
+		temp2 := generador.nuevoTemporal() //temp generado para almacenar el numero casteado
+		temp3 := generador.nuevoTemporal() //temp generado para almacenar el valor leido del heap
+		temp4 := generador.nuevoTemporal() //temp generado para almacenar el valor numerico del caracter
+		temp5 := generador.nuevoTemporal() //temp generado para obtener el valor guardado
+		temp6 := generador.nuevoTemporal() //temp generado para almacenar el nuevo numero
+		temp7 := generador.nuevoTemporal() //variable aux para los decimales
+		ciclo := generador.nuevaEtiqueta()
+		aux := generador.nuevaEtiqueta()
+		ciclo2 := generador.nuevaEtiqueta()
+		salida := generador.nuevaEtiqueta()
+
+		generador.Expresion(temp1, fmt.Sprint(expr.Valor), "", "")
+		generador.Expresion(temp2, "H", "", "") //temp2 = H
+		generador.setHeap("H", "0")             //almacena en el heap el numero 0
+		generador.imprimirEtiqueta(ciclo)
+		generador.getHeap(temp3, temp1)               //temp3 = valor leido del heap
+		generador.If(temp3, "==", "-1", salida)       //si es -1, termina el ciclo
+		generador.If(temp3, "==", "46", aux)          //si es ., va al aux
+		generador.Expresion(temp4, temp3, "-", "48")  //se resta 48 para obtener su valor numerico, no ascii
+		generador.getHeap(temp5, "H")                 //temp5 = valor guardado en el heap
+		generador.Expresion(temp6, temp5, "*", "10")  //multiplica el valor guardado * 10
+		generador.Expresion(temp6, temp6, "+", temp4) //suma el valor guardado * 10 + el valor numerico del caracter
+		generador.setHeap("H", temp6)                 //guarda el nuevo numero en el heap
+		generador.Expresion(temp1, temp1, "+", "1")   //avanza al siguiente caracter
+		generador.Goto(ciclo)
+
+		generador.imprimirEtiqueta(aux)
+		generador.Expresion(temp1, temp1, "+", "1") //avanza al siguiente caracter
+		generador.Expresion(temp7, "0.1", "", "")   //temp7 = 0.1
+
+		generador.imprimirEtiqueta(ciclo2)
+		generador.getHeap(temp3, temp1)               //temp3 = valor leido del heap
+		generador.If(temp3, "==", "-1", salida)       //si es -1, termina el ciclo
+		generador.Expresion(temp4, temp3, "-", "48")  //se resta 48 para obtener su valor numerico, no ascii
+		generador.getHeap(temp5, "H")                 //temp5 = valor guardado en el heap
+		generador.Expresion(temp6, temp4, "*", temp7) //multiplica el valor leido por aux -> leido*t7
+		generador.Expresion(temp6, temp5, "+", temp6) //guardado+(leido*t7) -> es el nuevo numero
+		generador.setHeap("H", temp6)                 //guarda el nuevo numero en el heap
+		generador.Expresion(temp7, temp7, "*", "0.1") //temp7=temp7*0.1
+		generador.Expresion(temp1, temp1, "+", "1")   //avanza al siguiente caracter
+		generador.Goto(ciclo2)
+
+		generador.imprimirEtiqueta(salida)
+		generador.nextHeap()
+		generador.getHeap(temp2, temp2)
+		generador.Comentario("Fin casteo de String a Float\n")
+		return Valor{Valor: temp2, Tipo: Float}
 	}
 	listaErrores = append(listaErrores, Error_{
 		Tipo:    "SEMANTICO",
@@ -1032,8 +1080,7 @@ func (v *Visitor) VisitFloatCastExpr(ctx *parser.FloatCastExprContext, ts Scope,
 		Columna: "",
 		Mensaje: fmt.Sprintf("No se puede convertir la expresion '%v' a Float", expr.Valor),
 	})
-	return Valor{Valor: "nil", Tipo: Int} */
-	return nil
+	return Valor{}
 }
 
 func (v *Visitor) VisitStringCastExpr(ctx *parser.StringCastExprContext, ts Scope, generador *Generador) interface{} {
