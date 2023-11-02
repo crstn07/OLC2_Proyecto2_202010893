@@ -1076,16 +1076,94 @@ func (v *Visitor) VisitFloatCastExpr(ctx *parser.FloatCastExprContext, ts Scope,
 	}
 	listaErrores = append(listaErrores, Error_{
 		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
+		Linea:   fmt.Sprint(ctx.Expr().GetStart().GetLine()),
+		Columna: fmt.Sprint(ctx.Expr().GetStart().GetColumn()),
 		Mensaje: fmt.Sprintf("No se puede convertir la expresion '%v' a Float", expr.Valor),
 	})
 	return Valor{}
 }
 
 func (v *Visitor) VisitStringCastExpr(ctx *parser.StringCastExprContext, ts Scope, generador *Generador) interface{} {
-	//return Valor{Valor: fmt.Sprintf("%v", v.Visit(ctx.Expr(), ts, generador).Valor), Tipo: String}
-	return nil
+	expr := v.Visit(ctx.Expr(), ts, generador).(Valor)
+	if expr.Tipo == Int {
+		generador.Comentario("Casteo de Int a String")
+		temp1 := generador.nuevoTemporal()
+		temp2 := generador.nuevoTemporal()
+		temp3 := generador.nuevoTemporal()
+		temp4 := generador.nuevoTemporal()
+		temp5 := generador.nuevoTemporal()
+		temp6 := generador.nuevoTemporal() //almacena el inicio del string nuevo
+		ciclo1 := generador.nuevaEtiqueta()
+		ciclo2 := generador.nuevaEtiqueta()
+		salida1 := generador.nuevaEtiqueta()
+		salida2 := generador.nuevaEtiqueta()
+
+		generador.setHeap("H", "-1")
+		generador.nextHeap()
+		generador.Expresion(temp1, fmt.Sprint(expr.Valor), "", "")
+		generador.imprimirEtiqueta(ciclo1)
+		generador.If(temp1, "==", "0", salida1)
+		generador.Expresion(temp2, "(int)"+temp1, "%", "10")
+		generador.Expresion(temp3, temp1, "-", temp2)
+		generador.Expresion(temp1, temp3, "*", "0.1")
+		generador.Expresion(temp2, temp2, "+", "48") //se suma 48 para guardar su valor ascii
+		generador.setHeap("H", temp2)
+		generador.nextHeap()
+		generador.Goto(ciclo1)
+		generador.imprimirEtiqueta(salida1)
+		generador.Expresion(temp4, "H", "-", "1")
+		generador.Expresion(temp6, "H", "", "")
+		generador.imprimirEtiqueta(ciclo2)
+		generador.If(temp4, "==", "-1", salida2)
+		generador.getHeap(temp5, temp4)
+		generador.setHeap("H", temp5)
+		generador.Expresion(temp4, temp4, "-", "1")
+		generador.nextHeap()
+		generador.Goto(ciclo2)
+		generador.imprimirEtiqueta(salida2)
+		generador.nextHeap()
+		generador.setHeap("H", "-1")
+		generador.nextHeap()
+		generador.Comentario("Fin Casteo de Int a String\n")
+		return Valor{Valor: temp6, Tipo: String}
+	} else if expr.Tipo == Float {
+		return Valor{Valor: expr.Valor, Tipo: Float}
+	} else if expr.Tipo == Bool {
+		generador.Comentario("Casteo de Bool a String")
+		temp := generador.nuevoTemporal()
+		Salida := generador.nuevaEtiqueta()
+		True := generador.nuevaEtiqueta()
+		False := generador.nuevaEtiqueta()
+		generador.Expresion(temp, "H", "", "")
+		generador.If(fmt.Sprint(expr.Valor), "==", "1", True)
+		generador.Goto(False)
+		generador.imprimirEtiqueta(True)
+		generador.setHeap("H", "116")
+		generador.nextHeap()
+		generador.setHeap("H", "114")
+		generador.nextHeap()
+		generador.setHeap("H", "117")
+		generador.nextHeap()
+		generador.setHeap("H", "101")
+		generador.Goto(Salida)
+		generador.imprimirEtiqueta(False)
+		generador.setHeap("H", "102")
+		generador.nextHeap()
+		generador.setHeap("H", "97")
+		generador.nextHeap()
+		generador.setHeap("H", "108")
+		generador.nextHeap()
+		generador.setHeap("H", "115")
+		generador.nextHeap()
+		generador.setHeap("H", "101")
+		generador.imprimirEtiqueta(Salida)
+		generador.nextHeap()
+		generador.setHeap("H", "-1")
+		generador.nextHeap()
+		generador.Comentario("Fin Casteo de Bool a String")
+		return Valor{Valor: temp, Tipo: String}
+	}
+	return Valor{}
 }
 
 func (v *Visitor) VisitFuncion(ctx *parser.FuncionContext, ts Scope, generador *Generador) interface{} {
