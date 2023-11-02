@@ -181,7 +181,7 @@ function App() {
                               <th scope="col">ID</th>
                               <th scope="col">TIPO SIMBOLO</th>
                               <th scope="col">TIPO DATO</th>
-                              <th scope="col">VALOR</th>
+                              
                               <th scope="col">LINEA</th>
                               <th scope="col">COLUMNA</th>
 
@@ -196,7 +196,6 @@ function App() {
             <td scope="col"> ${clave} </td>
             <td scope="col"> Variable </td>
             <td scope="col"> ${obtenerTipo(valor.Tipo)}</td>
-            <td scope="col"> ${JSON.stringify(valor.Valor)}</td>
             <td scope="col"> ${valor.Linea}</td>
             <td scope="col"> ${valor.Columna}</td>
             </tr>`
