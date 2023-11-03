@@ -48,6 +48,7 @@ instr: declaracion
     | funcion
     | llamada_func
     | dec_vector
+    | dec_matriz
     | copia_vector
     | modificacion_vector
     | append
@@ -149,6 +150,15 @@ removeAt
     : ID '.remove' '(' 'at' ':' expr ')'
     ;
 
+dec_matriz
+    : 'let' ID (':' tipo )? '=' def_matriz
+    ;
+
+def_matriz
+    : '[' (expr (',' expr)*)? ']'
+    | '[' (def_matriz (',' def_matriz)*)? ']'
+    ;
+
 expr
     : <assoc=right> '!' expr          # NotExpr
     | <assoc=right> '-' expr          # UmenosExpr
@@ -173,4 +183,5 @@ expr
     | ID '[' expr ']'                       # AccesoVector
     | ID '.isEmpty'                         # IsEmpty
     | ID '.count'                           # Count
+    | ID ('[' expr ']')+                    # AccesoMatriz
     ;

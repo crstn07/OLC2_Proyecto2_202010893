@@ -209,7 +209,6 @@ function App() {
               <td scope="col"> ${clave} </td>
               <td scope="col"> Función </td>
               <td scope="col"> ${obtenerTipo(valor.TipoReturn)}</td>
-              <td scope="col"> </td>
               <td scope="col"> ${valor.Linea}</td>
               <td scope="col"> ${valor.Columna}</td>
               </tr>`

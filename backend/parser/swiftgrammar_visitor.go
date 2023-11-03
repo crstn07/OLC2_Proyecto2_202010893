@@ -94,6 +94,12 @@ type SwiftGrammarVisitor interface {
 	// Visit a parse tree produced by SwiftGrammarParser#removeAt.
 	VisitRemoveAt(ctx *RemoveAtContext) interface{}
 
+	// Visit a parse tree produced by SwiftGrammarParser#dec_matriz.
+	VisitDec_matriz(ctx *Dec_matrizContext) interface{}
+
+	// Visit a parse tree produced by SwiftGrammarParser#def_matriz.
+	VisitDef_matriz(ctx *Def_matrizContext) interface{}
+
 	// Visit a parse tree produced by SwiftGrammarParser#IsEmpty.
 	VisitIsEmpty(ctx *IsEmptyContext) interface{}
 
@@ -108,6 +114,9 @@ type SwiftGrammarVisitor interface {
 
 	// Visit a parse tree produced by SwiftGrammarParser#NilExpr.
 	VisitNilExpr(ctx *NilExprContext) interface{}
+
+	// Visit a parse tree produced by SwiftGrammarParser#AccesoMatriz.
+	VisitAccesoMatriz(ctx *AccesoMatrizContext) interface{}
 
 	// Visit a parse tree produced by SwiftGrammarParser#IdExpr.
 	VisitIdExpr(ctx *IdExprContext) interface{}

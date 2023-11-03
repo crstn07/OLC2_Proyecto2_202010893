@@ -94,6 +94,12 @@ type SwiftGrammarListener interface {
 	// EnterRemoveAt is called when entering the removeAt production.
 	EnterRemoveAt(c *RemoveAtContext)
 
+	// EnterDec_matriz is called when entering the dec_matriz production.
+	EnterDec_matriz(c *Dec_matrizContext)
+
+	// EnterDef_matriz is called when entering the def_matriz production.
+	EnterDef_matriz(c *Def_matrizContext)
+
 	// EnterIsEmpty is called when entering the IsEmpty production.
 	EnterIsEmpty(c *IsEmptyContext)
 
@@ -108,6 +114,9 @@ type SwiftGrammarListener interface {
 
 	// EnterNilExpr is called when entering the NilExpr production.
 	EnterNilExpr(c *NilExprContext)
+
+	// EnterAccesoMatriz is called when entering the AccesoMatriz production.
+	EnterAccesoMatriz(c *AccesoMatrizContext)
 
 	// EnterIdExpr is called when entering the IdExpr production.
 	EnterIdExpr(c *IdExprContext)
@@ -235,6 +244,12 @@ type SwiftGrammarListener interface {
 	// ExitRemoveAt is called when exiting the removeAt production.
 	ExitRemoveAt(c *RemoveAtContext)
 
+	// ExitDec_matriz is called when exiting the dec_matriz production.
+	ExitDec_matriz(c *Dec_matrizContext)
+
+	// ExitDef_matriz is called when exiting the def_matriz production.
+	ExitDef_matriz(c *Def_matrizContext)
+
 	// ExitIsEmpty is called when exiting the IsEmpty production.
 	ExitIsEmpty(c *IsEmptyContext)
 
@@ -249,6 +264,9 @@ type SwiftGrammarListener interface {
 
 	// ExitNilExpr is called when exiting the NilExpr production.
 	ExitNilExpr(c *NilExprContext)
+
+	// ExitAccesoMatriz is called when exiting the AccesoMatriz production.
+	ExitAccesoMatriz(c *AccesoMatrizContext)
 
 	// ExitIdExpr is called when exiting the IdExpr production.
 	ExitIdExpr(c *IdExprContext)

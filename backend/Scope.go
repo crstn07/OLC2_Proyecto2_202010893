@@ -33,15 +33,14 @@ type Variable struct {
 }
 
 type Scope struct {
-	Nombre       string
-	Anterior     *Scope
-	Variables    map[string]Variable
-	Funciones    map[string]Funcion
-	Size         map[string]int
-	etqSalida    string
-	etqCiclo     string
-	Tipo         int
-	ValorRetorno string
+	Nombre    string
+	Anterior  *Scope
+	Variables map[string]Variable
+	Funciones map[string]Funcion
+	Size      map[string]int
+	etqSalida string
+	etqCiclo  string
+	etqReturn string
 }
 
 // Definiciones de tipos

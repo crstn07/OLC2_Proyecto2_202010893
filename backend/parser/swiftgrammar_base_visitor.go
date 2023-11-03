@@ -123,6 +123,14 @@ func (v *BaseSwiftGrammarVisitor) VisitRemoveAt(ctx *RemoveAtContext) interface{
 	return v.VisitChildren(ctx)
 }
 
+func (v *BaseSwiftGrammarVisitor) VisitDec_matriz(ctx *Dec_matrizContext) interface{} {
+	return v.VisitChildren(ctx)
+}
+
+func (v *BaseSwiftGrammarVisitor) VisitDef_matriz(ctx *Def_matrizContext) interface{} {
+	return v.VisitChildren(ctx)
+}
+
 func (v *BaseSwiftGrammarVisitor) VisitIsEmpty(ctx *IsEmptyContext) interface{} {
 	return v.VisitChildren(ctx)
 }
@@ -140,6 +148,10 @@ func (v *BaseSwiftGrammarVisitor) VisitFloatExpr(ctx *FloatExprContext) interfac
 }
 
 func (v *BaseSwiftGrammarVisitor) VisitNilExpr(ctx *NilExprContext) interface{} {
+	return v.VisitChildren(ctx)
+}
+
+func (v *BaseSwiftGrammarVisitor) VisitAccesoMatriz(ctx *AccesoMatrizContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 

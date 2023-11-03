@@ -65,6 +65,8 @@ func (v *Visitor) Visit(tree antlr.ParseTree, ts Scope, generador *Generador) in
 		return v.VisitLlamadaFuncExpr(val, ts, generador)
 	case *parser.Dec_vectorContext:
 		return v.VisitDeclaracion_vector(val, ts, generador)
+	case *parser.Dec_matrizContext:
+		return v.VisitDeclaracion_matriz(val, ts, generador)
 	case *parser.Modificacion_vectorContext:
 		return v.VisitModificacion_vector(val, ts, generador)
 	case *parser.AppendContext:
@@ -107,6 +109,8 @@ func (v *Visitor) Visit(tree antlr.ParseTree, ts Scope, generador *Generador) in
 		return v.VisitIsEmpty(val, ts, generador)
 	case *parser.CountContext:
 		return v.VisitCount(val, ts, generador)
+	case *parser.AccesoMatrizContext:
+		return v.VisitAccesoMatriz(val, ts, generador)
 	default:
 		return fmt.Sprintf("Contexto No reconocido: %v", val)
 	}
@@ -181,6 +185,9 @@ func (v *Visitor) VisitInstr(ctx *parser.InstrContext, ts Scope, generador *Gene
 	}
 	if ctx.Dec_vector() != nil {
 		return v.Visit(ctx.Dec_vector(), ts, generador)
+	}
+	if ctx.Dec_matriz() != nil {
+		return v.Visit(ctx.Dec_matriz(), ts, generador)
 	}
 	if ctx.Copia_vector() != nil {
 		return v.Visit(ctx.Copia_vector(), ts, generador)
@@ -1579,55 +1586,8 @@ func (v *Visitor) VisitLlamada_func(ctx *parser.Llamada_funcContext, ts Scope, g
 		}
 		//generador.getStack(value, "P")
 		generador.Comentario("FIN LLAMADA")
+		return Valor{Valor: value, Tipo: funcion.TipoReturn}
 
-		if funcion.TipoReturn == Void {
-
-			//retorno := v.Visit(funcion.Bloque, ts_func, generador)
-
-			//fmt.Println("TABLA DE SIMBOLOS FUNCION:", ts_func.Nombre, ts_func.Variables)
-			//fmt.Println("TABLA DE SIMBOLOS TS:", ts.Nombre, ts.Variables)
-			/* 			if retorno.(Valor).ReturnVal == nil {
-				// Si los parametros son por referencia, actualizar los valores en el scope padre
-				for _, valor := range ts_func.Variables {
-					if !valor.Constante {
-						ts.cambiarValPorReferencia(valor.ID, valor.Valor)
-						//fmt.Println("-----------SE MODIFICO LA VARIABLE------------------------->", valor.ID)
-						//fmt.Println("TABLA DE SIMBOLOS MODIFICADA TS:", ts.Nombre, ts.Variables)
-					}
-				}
-				return retorno
-			}
-			listaErrores = append(listaErrores, Error_{
-				Tipo:    "SEMANTICO",
-				Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
-				Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
-				Mensaje: fmt.Sprintf("La función '%v' no debe tener un valor de retorno\n", funcion.ID),
-			})*/
-			return Valor{}
-
-		} else {
-			return Valor{Valor: value, Tipo: funcion.TipoReturn}
-			/* 			retorno := v.Visit(funcion.Bloque, ts_func, generador)
-			   			if retorno.ReturnTipo == Void {
-			   				listaErrores = append(listaErrores, Error_{
-			   					Tipo:    "SEMANTICO",
-			   					Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
-			   					Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
-			   					Mensaje: fmt.Sprintf("La función '%v' debe tener un valor de retorno\n", funcion.ID),
-			   				})
-			   				return Valor{}
-			   			} else if retorno.ReturnTipo == funcion.TipoReturn {
-			   				return Valor{Valor: retorno.ReturnVal, Tipo: retorno.ReturnTipo, ReturnVal: retorno.ReturnVal, ReturnTipo: retorno.ReturnTipo, Return: true}
-			   			} else {
-			   				listaErrores = append(listaErrores, Error_{
-			   					Tipo:    "SEMANTICO",
-			   					Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
-			   					Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
-			   					Mensaje: fmt.Sprintf("El tipo de la expresión de retorno no coincide con el tipo de la función:  '%v'\n", funcion.ID),
-			   				})
-			   				return Valor{}
-			   			} */
-		}
 	}
 	return Valor{}
 }
@@ -2028,6 +1988,181 @@ func (v *Visitor) VisitCount(ctx *parser.CountContext, ts Scope, generador *Gene
 		Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
 		Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
 		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
+	})
+	return Valor{}
+}
+
+func (v *Visitor) VisitDeclaracion_matriz(ctx *parser.Dec_matrizContext, ts Scope, generador *Generador) interface{} {
+	id := ctx.ID().GetText()
+	var tipo int // Variable para almacenar el tipo de la variable
+	fmt.Println("Declaracion de matriz")
+	var cont int
+	aux := ctx.Tipo()
+	for aux.Tipo() != nil {
+		aux = aux.Tipo()
+		cont++
+	}
+	fmt.Println("Dimensiones:", cont)
+	fmt.Println("Tipo:", aux.GetText())
+	switch aux.GetText() {
+	case "String":
+		tipo = String
+	case "Bool":
+		tipo = Bool
+	case "Character":
+		tipo = Character
+	case "Int":
+		tipo = Int
+	case "Float":
+		tipo = Float
+	}
+	fmt.Println("Tipo:", tipo)
+	fmt.Println("Expresion:", ctx.Def_matriz().GetText())
+	if cont == 1 {
+		if ctx.Def_matriz().Expr(0) != nil {
+			// Verifica Tipos
+			for i := 0; ctx.Def_matriz().Expr(i) != nil; i++ {
+				if v.Visit(ctx.Def_matriz().Expr(i), ts, generador).(Valor).Tipo != tipo {
+					listaErrores = append(listaErrores, Error_{
+						Tipo:    "SEMANTICO",
+						Linea:   fmt.Sprint(ctx.Def_matriz().Expr(i).GetStart().GetLine()),
+						Columna: fmt.Sprint(ctx.Def_matriz().Expr(i).GetStart().GetColumn()),
+						Mensaje: fmt.Sprintf("El tipo del elemento '%v' no coincide con el tipo del vector '%v'\n", v.Visit(ctx.Def_matriz().Expr(i), ts, generador).(Valor).Valor, id),
+					})
+					return Valor{}
+				}
+			}
+			generador.Comentario("Declaración de Matriz 1D")
+			temp := generador.nuevoTemporal()
+			cont := 0
+			generador.Expresion(temp, "H", "", "")
+			// Agrega los valores si todos son del mismo tipo
+			for i := 0; ctx.Def_matriz().Expr(i) != nil; i++ {
+				value := v.Visit(ctx.Def_matriz().Expr(i), ts, generador).(Valor).Valor
+				generador.setHeap("H", fmt.Sprint(value))
+				generador.nextHeap()
+				cont++
+			}
+			generador.agregarCodigo("\n")
+			// Agrega la matriz al scope
+			ts.agregarVariable(Variable{id, tipo, temp, false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), true, cont})
+			return Valor{}
+		}
+	} else if cont == 2 {
+		tam := 0
+		generador.Comentario("Declaración de Matriz " + fmt.Sprint(cont) + "D")
+		temp := generador.nuevoTemporal()
+		generador.Expresion(temp, "H", "", "")
+		for j := 0; ctx.Def_matriz().Def_matriz(j) != nil; j++ {
+			vect := ctx.Def_matriz().Def_matriz(j)
+			for i := 0; vect.Expr(i) != nil; i++ {
+				if v.Visit(vect.Expr(i), ts, generador).(Valor).Tipo != tipo {
+					listaErrores = append(listaErrores, Error_{
+						Tipo:    "SEMANTICO",
+						Linea:   fmt.Sprint(vect.Expr(i).GetStart().GetLine()),
+						Columna: fmt.Sprint(vect.Expr(i).GetStart().GetColumn()),
+						Mensaje: fmt.Sprintf("El tipo del elemento '%v' no coincide con el tipo del vector '%v'\n", v.Visit(vect.Expr(i), ts, generador).(Valor).Valor, id),
+					})
+					return Valor{}
+				}
+			}
+			// Agrega los valores si todos son del mismo tipo
+			tam = 0
+			for i := 0; vect.Expr(i) != nil; i++ {
+				value := v.Visit(vect.Expr(i), ts, generador).(Valor).Valor
+				generador.setHeap("H", fmt.Sprint(value))
+				generador.nextHeap()
+				tam++
+			}
+			generador.agregarCodigo("\n")
+		}
+		// Agrega la matriz al scope
+		ts.agregarVariable(Variable{id, tipo, temp, false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), true, tam})
+		return Valor{}
+	}
+	return Valor{}
+}
+
+func (v *Visitor) VisitAccesoMatriz(ctx *parser.AccesoMatrizContext, ts Scope, generador *Generador) interface{} {
+	id := ctx.ID().GetText()
+	matriz := ts.encontrarVariable(id, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()).(Variable)
+
+	/* 	for i := 0; ctx.Expr(i) != nil; i++ {
+		indice = v.Visit(ctx.Expr(i), ts, generador).(Valor).Valor.(int) + indice
+		fmt.Println("indice:", indice)
+	} */
+	in1 := v.Visit(ctx.Expr(0), ts, generador).(Valor)
+	in2 := v.Visit(ctx.Expr(1), ts, generador).(Valor)
+
+	// Verifica que el ID sea de la matriz
+	if matriz.enHeap {
+		if in1.Tipo == Int && in2.Tipo == Int {
+			in1 := in1.Valor.(int)
+			in2 := in2.Valor.(int)
+			indice := in1*matriz.Tam + in2
+			fmt.Println("indice:", indice)
+			// Verifica si el índice está dentro de los límites de la matriz
+			generador.Comentario("Acceso a Matriz")
+			//tam := generador.nuevoTemporal()
+			salida := generador.nuevaEtiqueta()
+			ciclo := generador.nuevaEtiqueta()
+			//Err := generador.nuevaEtiqueta()
+			//NoErr := generador.nuevaEtiqueta()
+			contador := generador.nuevoTemporal()
+			tmpH := generador.nuevoTemporal()
+			tmp := generador.nuevoTemporal()
+
+			/* generador.Expresion(tam, fmt.Sprint(matriz.Tam), "-", "1")
+			generador.If(tam, "<", fmt.Sprint(indice), Err) // Si el indice es mayor al tamaño del vector
+			generador.If(fmt.Sprint(indice), "<", "0", Err) // Si el indice es menor a 0
+			generador.Goto(NoErr)
+			generador.imprimirEtiqueta(Err)
+
+			generador.Printf("c", "", "66")  //B
+			generador.Printf("c", "", "111") //o
+			generador.Printf("c", "", "117") //u
+			generador.Printf("c", "", "110") //n
+			generador.Printf("c", "", "100") //d
+			generador.Printf("c", "", "115") //s
+			generador.Printf("c", "", "69")  //E
+			generador.Printf("c", "", "114") //r
+			generador.Printf("c", "", "114") //r
+			generador.Printf("c", "", "111") //o
+			generador.Printf("c", "", "114") //r
+			generador.Printf("c", "", "46")  //.
+			generador.Printf("c", "", "32")  //espacio
+
+			generador.Expresion(tmp, "999999999", "", "") //nil
+			generador.Goto(salida)
+			generador.imprimirEtiqueta(NoErr) */
+
+			// Retorna el valor del vector
+			generador.Expresion(tmpH, fmt.Sprint(matriz.Valor), "", "") //inicio en el heap del vector
+			generador.imprimirEtiqueta(ciclo)
+			generador.getHeap(tmp, tmpH)
+			generador.If(contador, "==", fmt.Sprint(indice), salida)
+			generador.Expresion(tmpH, tmpH, "+", "1")
+			generador.Expresion(contador, contador, "+", "1")
+			generador.Goto(ciclo)
+			generador.imprimirEtiqueta(salida)
+			generador.agregarCodigo("\n")
+
+			return Valor{Valor: tmp, Tipo: matriz.Tipo}
+		}
+		// Si no es int
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+			Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+			Mensaje: fmt.Sprintf("El índice no es de tipo Int\n"),
+		})
+		return Valor{}
+	}
+	listaErrores = append(listaErrores, Error_{
+		Tipo:    "SEMANTICO",
+		Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+		Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+		Mensaje: fmt.Sprintf("La variable '%v' no es una matriz\n", id),
 	})
 	return Valor{}
 }

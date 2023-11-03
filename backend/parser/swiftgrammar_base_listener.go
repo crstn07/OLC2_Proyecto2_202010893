@@ -194,6 +194,18 @@ func (s *BaseSwiftGrammarListener) EnterRemoveAt(ctx *RemoveAtContext) {}
 // ExitRemoveAt is called when production removeAt is exited.
 func (s *BaseSwiftGrammarListener) ExitRemoveAt(ctx *RemoveAtContext) {}
 
+// EnterDec_matriz is called when production dec_matriz is entered.
+func (s *BaseSwiftGrammarListener) EnterDec_matriz(ctx *Dec_matrizContext) {}
+
+// ExitDec_matriz is called when production dec_matriz is exited.
+func (s *BaseSwiftGrammarListener) ExitDec_matriz(ctx *Dec_matrizContext) {}
+
+// EnterDef_matriz is called when production def_matriz is entered.
+func (s *BaseSwiftGrammarListener) EnterDef_matriz(ctx *Def_matrizContext) {}
+
+// ExitDef_matriz is called when production def_matriz is exited.
+func (s *BaseSwiftGrammarListener) ExitDef_matriz(ctx *Def_matrizContext) {}
+
 // EnterIsEmpty is called when production IsEmpty is entered.
 func (s *BaseSwiftGrammarListener) EnterIsEmpty(ctx *IsEmptyContext) {}
 
@@ -223,6 +235,12 @@ func (s *BaseSwiftGrammarListener) EnterNilExpr(ctx *NilExprContext) {}
 
 // ExitNilExpr is called when production NilExpr is exited.
 func (s *BaseSwiftGrammarListener) ExitNilExpr(ctx *NilExprContext) {}
+
+// EnterAccesoMatriz is called when production AccesoMatriz is entered.
+func (s *BaseSwiftGrammarListener) EnterAccesoMatriz(ctx *AccesoMatrizContext) {}
+
+// ExitAccesoMatriz is called when production AccesoMatriz is exited.
+func (s *BaseSwiftGrammarListener) ExitAccesoMatriz(ctx *AccesoMatrizContext) {}
 
 // EnterIdExpr is called when production IdExpr is entered.
 func (s *BaseSwiftGrammarListener) EnterIdExpr(ctx *IdExprContext) {}
