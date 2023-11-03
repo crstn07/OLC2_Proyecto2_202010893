@@ -65,8 +65,6 @@ func (v *Visitor) Visit(tree antlr.ParseTree, ts Scope, generador *Generador) in
 		return v.VisitLlamadaFuncExpr(val, ts, generador)
 	case *parser.Dec_vectorContext:
 		return v.VisitDeclaracion_vector(val, ts, generador)
-	case *parser.Copia_vectorContext:
-		return v.VisitCopia_vector(val, ts, generador)
 	case *parser.Modificacion_vectorContext:
 		return v.VisitModificacion_vector(val, ts, generador)
 	case *parser.AppendContext:
@@ -123,18 +121,6 @@ func (v *Visitor) VisitBlock(ctx *parser.BlockContext, ts Scope, generador *Gene
 	out := ""
 	for i := 0; ctx.Instr(i) != nil; i++ {
 		v.Visit(ctx.Instr(i), ts, generador)
-		//res := v.Visit(ctx.Instr(i), ts, generador)
-		//out += fmt.Sprintf("%v", res.Valor)
-		/* if res.Break {
-			return Valor{Valor: out, Break: true}
-		}
-		if res.Continue {
-			return Valor{Valor: out, Continue: true}
-		}
-		if res.Return {
-			fmt.Println("Retorno en BLOQUE CON RETORNO TRUE: ", res.ReturnVal, res.ReturnTipo)
-			return Valor{Valor: out, ReturnVal: res.ReturnVal, ReturnTipo: res.ReturnTipo, Return: true}
-		} */
 	}
 	return Valor{Valor: out}
 }
@@ -182,6 +168,7 @@ func (v *Visitor) VisitInstr(ctx *parser.InstrContext, ts Scope, generador *Gene
 			fmt.Println("Retorno: ", retorno.Valor, retorno.Tipo)
 			generador.Comentario("Instrucción Return")
 			generador.setStack("P", fmt.Sprint(retorno.Valor))
+			//generador.Goto(ts.etqSalida)
 			return Valor{Valor: retorno.Valor, Tipo: retorno.Tipo}
 		}
 		return Valor{}
@@ -267,15 +254,15 @@ func (v *Visitor) VisitDeclaracionTipoValor(ctx *parser.DeclaracionTipoValorCont
 		case "Float":
 			tipo = Float
 		}
-		//return ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, valores, false, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+		//return ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, valores, false, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false,1})
 	} */
 	var pos int
 	if tipo == expr.Tipo {
-		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false, 1}) // Agrega la variable al scope
 	} else if tipo == Float && expr.Tipo == Int {
-		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), Float, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope de tipo float
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), Float, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false, 1}) // Agrega la variable al scope de tipo float
 	} else if tipo == Character && expr.Tipo == String && len(expr.Valor.(string)) == 1 {
-		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), Character, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope de tipo Character
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), Character, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false, 1}) // Agrega la variable al scope de tipo Character
 	} else {
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
@@ -311,7 +298,7 @@ func (v *Visitor) VisitDeclaracionTipo(ctx *parser.DeclaracionTipoContext, ts Sc
 		case "Float":
 			tipo = Float
 		}
-		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, "nil", false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // Agrega la variable al scope con valor nil
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), tipo, "nil", false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false, 1}) // Agrega la variable al scope con valor nil
 		if pos == -1 {
 			generador.Comentario("Error: La variable ya existe")
 			return Valor{}
@@ -342,7 +329,7 @@ func (v *Visitor) VisitDeclaracionValor(ctx *parser.DeclaracionValorContext, ts 
 		/* 		if expr.Tipo == String {
 			heap = true
 		} */
-		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), expr.Tipo, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+		pos = ts.agregarVariable(Variable{ctx.ID().GetText(), expr.Tipo, expr.Valor, constante, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false, 1})
 		generador.Comentario("Declaración de variable: " + ctx.ID().GetText())
 		generador.setStack(fmt.Sprint(pos), fmt.Sprint(expr.Valor))
 		generador.agregarCodigo("\n")
@@ -760,7 +747,7 @@ func (v *Visitor) VisitFor(ctx *parser.For_instrContext, ts Scope, generador *Ge
 			fmt.Println(expr1.Valor, ", ", expr2.Valor)
 			//if expr1.Valor.(int) <= expr2.Valor.(int) { // La expresion 1 es menor que la expresion 2
 			generador.Comentario("Instrucción FOR")
-			pos := ts_for.agregarVariable(Variable{ctx.ID().GetText(), Int, expr1.Valor.(int), false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+			pos := ts_for.agregarVariable(Variable{ctx.ID().GetText(), Int, expr1.Valor.(int), false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false, 1})
 			if pos == -1 {
 				generador.Comentario("Error: La variable ya existe")
 				return Valor{}
@@ -1234,12 +1221,12 @@ func (v *Visitor) VisitFuncion(ctx *parser.FuncionContext, ts Scope, generador *
 		// Por referencia o por valor
 		/* 		if ctx.Parametros().INOUT() != nil { // POR REFERENCIA
 		   			// Agrega el parametro al scope de la funcion como constante
-		   			//ts_func.agregarVariablePorReferencia(id_interno, Variable{id_interno, tipo, 0, false, 0, ctx.Parametros().ID(0).GetSymbol().GetLine(), ctx.Parametros().ID(0).GetSymbol().GetColumn()})
+		   			//ts_func.agregarVariablePorReferencia(id_interno, Variable{id_interno, tipo, 0, false, 0, ctx.Parametros().ID(0).GetSymbol().GetLine(), ctx.Parametros().ID(0).GetSymbol().GetColumn(),false})
 		   		} else {
 		   			// Agrego el parametro al scope de la funcion como variable
-		   			//ts_func.agregarVariable(Variable{id_interno, tipo, 0, false, 0, ctx.Parametros().ID(0).GetSymbol().GetLine(), ctx.Parametros().ID(0).GetSymbol().GetColumn()})
+		   			//ts_func.agregarVariable(Variable{id_interno, tipo, 0, false, 0, ctx.Parametros().ID(0).GetSymbol().GetLine(), ctx.Parametros().ID(0).GetSymbol().GetColumn(),false})
 		   		} */
-		ts_func.agregarParam(Variable{id_interno, tipo, 0, false, 0, ctx.Parametros().ID(0).GetSymbol().GetLine(), ctx.Parametros().ID(0).GetSymbol().GetColumn()})
+		ts_func.agregarParam(Variable{id_interno, tipo, 0, false, 0, ctx.Parametros().ID(0).GetSymbol().GetLine(), ctx.Parametros().ID(0).GetSymbol().GetColumn(), false, 1})
 
 		params := ctx.Parametros()
 		/// OBTENER LOS PARAMETROS ANIDADOS
@@ -1285,12 +1272,12 @@ func (v *Visitor) VisitFuncion(ctx *parser.FuncionContext, ts Scope, generador *
 				/* 				// Por referencia o por valor
 				   				if params.Parametros().INOUT() != nil { // POR REFERENCIA
 				   					// Agrega el parametro al scope de la funcion como constante
-				   					ts_func.agregarVariablePorReferencia(id_interno, Variable{id_interno, tipo, 0, false, 0, params.ID(0).GetSymbol().GetLine(), params.ID(0).GetSymbol().GetColumn()})
+				   					ts_func.agregarVariablePorReferencia(id_interno, Variable{id_interno, tipo, 0, false, 0, params.ID(0).GetSymbol().GetLine(), params.ID(0).GetSymbol().GetColumn(),false})
 				   				} else {
 				   					// Agrego el parametro al scope de la funcion como variable
-				   					ts_func.agregarVariable(Variable{id_interno, tipo, 0, false, 0, params.ID(0).GetSymbol().GetLine(), params.ID(0).GetSymbol().GetColumn()})
+				   					ts_func.agregarVariable(Variable{id_interno, tipo, 0, false, 0, params.ID(0).GetSymbol().GetLine(), params.ID(0).GetSymbol().GetColumn(),false})
 				   				} */
-				ts_func.agregarParam(Variable{id_interno, tipo, 0, false, 0, params.ID(0).GetSymbol().GetLine(), params.ID(0).GetSymbol().GetColumn()})
+				ts_func.agregarParam(Variable{id_interno, tipo, 0, false, 0, params.ID(0).GetSymbol().GetLine(), params.ID(0).GetSymbol().GetColumn(), false, 1})
 
 				params = params.Parametros()
 				if params.Parametros() == nil {
@@ -1299,19 +1286,11 @@ func (v *Visitor) VisitFuncion(ctx *parser.FuncionContext, ts Scope, generador *
 			}
 		}
 	}
-	// // NO SE QUE HACE ESTO
-	// /*         for (Object item: this.listInstructions) {
 
-	//            if (item instanceof CallFunction){
-	//                ((Instruction) item).compile(newTable);
-	//            }
-
-	//            ((Instruction) item).compile(newTable);
-	//        } */
 	//v.Visit(ctx.Block(), ts, generador)
 	ts_funciones[ctx.ID().GetText()] = ts_func
 	v.Visit(ctx.Block(), ts_func, generador)
-	generador.imprimirEtiqueta(Salida)
+	generador.imprimirEtiqueta(ts_func.etqSalida)
 	generador.finFuncion()
 	return Valor{}
 }
@@ -1319,8 +1298,9 @@ func (v *Visitor) VisitFuncion(ctx *parser.FuncionContext, ts Scope, generador *
 func (v *Visitor) VisitLlamada_func(ctx *parser.Llamada_funcContext, ts Scope, generador *Generador) interface{} {
 	funcion := ts.encontrarFuncion(ctx.ID().GetText())
 	if funcion.ID != "" {
-		ts_func := ts_funciones[ctx.ID().GetText()] // NuevoScope(ts, fmt.Sprintf("Función '%v'", ctx.ID().GetText()))
-		fmt.Println("ts_func: ", ts_func)
+		//ts_func := ts_funciones[ctx.ID().GetText()] // NuevoScope(ts, fmt.Sprintf("Función '%v'", ctx.ID().GetText()))
+		//ts_func := NuevoScope(ts, fmt.Sprintf("Función '%v'", ctx.ID().GetText()))
+
 		// ----------------------OBTENER LOS PARAMETROS DE LA LLAMADA DE LA FUNCION---------------------------------------
 		// El atributo 'Constante' hara referencia a si es por referencia o por valor
 		var parametros_llamada []Variable
@@ -1341,10 +1321,10 @@ func (v *Visitor) VisitLlamada_func(ctx *parser.Llamada_funcContext, ts Scope, g
 			// Por referencia o por valor
 			if params_llamada.REF() != nil {
 				// POR REFERENCIA
-				parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+				parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false, 1})
 			} else {
 				// POR VALOR
-				parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, true, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+				parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, true, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false, 1})
 			}
 
 			/// OBTENER LOS PARAMETROS ANIDADOS
@@ -1363,11 +1343,11 @@ func (v *Visitor) VisitLlamada_func(ctx *parser.Llamada_funcContext, ts Scope, g
 					// Por referencia o por valor
 					if params_llamada.Parametros_llamada().REF() != nil { // POR REFERENCIA
 						// Agrega el parametro al scope de la funcion como constante
-						parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+						parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false, 1})
 
 					} else {
 						// Agrego el parametro al scope de la funcion como variable
-						parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, true, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()})
+						parametros_llamada = append(parametros_llamada, Variable{id, expr.Tipo, expr.Valor, true, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), false, 1})
 					}
 					params_llamada = params_llamada.Parametros_llamada()
 					if params_llamada.Parametros_llamada() == nil {
@@ -1575,6 +1555,7 @@ func (v *Visitor) VisitLlamada_func(ctx *parser.Llamada_funcContext, ts Scope, g
 				generador.setStack(posicion, fmt.Sprint(parametros_llamada[i].Valor))
 				generador.agregarCodigo("\n")
 				count++
+				//ts_func.agregarVariable(Variable{parametros_llamada[i].ID, parametros_llamada[i].Tipo, parametros_llamada[i].Valor, false, 0, parametros_llamada[i].Linea, parametros_llamada[i].Columna})
 			}
 			generador.Comentario("FIN DECLARACION DE PARAMETROS")
 		}
@@ -1656,7 +1637,7 @@ func (v *Visitor) VisitLlamadaFuncExpr(ctx *parser.LlamadaFuncExprContext, ts Sc
 }
 
 func (v *Visitor) VisitDeclaracion_vector(ctx *parser.Dec_vectorContext, ts Scope, generador *Generador) interface{} {
-	/* id := ctx.ID().GetText()
+	id := ctx.ID().GetText()
 	var tipo int // Variable para almacenar el tipo de la variable
 	switch ctx.Tipo().GetText() {
 	case "String":
@@ -1670,154 +1651,217 @@ func (v *Visitor) VisitDeclaracion_vector(ctx *parser.Dec_vectorContext, ts Scop
 	case "Float":
 		tipo = Float
 	}
-	var valores []interface{}
+	//var valores []interface{}
 
 	// Si vienen valores
 	if ctx.Expr(0) != nil {
 		// Verifica Tipos
 		for i := 0; ctx.Expr(i) != nil; i++ {
-			if v.Visit(ctx.Expr(i), ts, generador).Tipo != tipo {
+			if v.Visit(ctx.Expr(i), ts, generador).(Valor).Tipo != tipo {
 				listaErrores = append(listaErrores, Error_{
 					Tipo:    "SEMANTICO",
-					Linea:   "",
-					Columna: "",
-					Mensaje: fmt.Sprintf("El tipo del elemento '%v' no coincide con el tipo del vector '%v'\n", v.Visit(ctx.Expr(i), ts, generador).Valor, id),
+					Linea:   fmt.Sprint(ctx.Expr(i).GetStart().GetLine()),
+					Columna: fmt.Sprint(ctx.Expr(i).GetStart().GetColumn()),
+					Mensaje: fmt.Sprintf("El tipo del elemento '%v' no coincide con el tipo del vector '%v'\n", v.Visit(ctx.Expr(i), ts, generador).(Valor).Valor, id),
 				})
-				return Valor{Valor: fmt.Sprintf("Error: El tipo del elemento '%v' no coincide con el tipo del vector '%v'\n", v.Visit(ctx.Expr(i), ts, generador).Valor, id), Tipo: Error}
+				return Valor{}
 			}
 		}
+		generador.Comentario("Declaración de Vector")
+		temp := generador.nuevoTemporal()
+		cont := 0
+		generador.Expresion(temp, "H", "", "")
 		// Agrega los valores si todos son del mismo tipo
 		for i := 0; ctx.Expr(i) != nil; i++ {
-			valores = append(valores, v.Visit(ctx.Expr(i), ts, generador).Valor)
+			value := v.Visit(ctx.Expr(i), ts, generador).(Valor).Valor
+			generador.setHeap("H", fmt.Sprint(value))
+			generador.nextHeap()
+			cont++
 		}
+		//generador.setHeap("H", "-999999999") //valor que indica el final del vector
+		//generador.nextHeap()
+		generador.agregarCodigo("\n")
+
 		// Agrega el vector al scope
-		return ts.agregarVariable(Variable{id, tipo, valores, false, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) // quitar el return ?
+		ts.agregarVariable(Variable{id, tipo, temp, false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), true, cont})
+		return Valor{}
 	}
 	// Si no vienen valores
-	return ts.agregarVariable(Variable{id, tipo, valores, false, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()}) */
-
-	return nil
-}
-
-func (v *Visitor) VisitCopia_vector(ctx *parser.Copia_vectorContext, ts Scope, generador *Generador) interface{} {
-	/* id := ctx.ID().GetText()
-	var tipo int // Variable para almacenar el tipo de la variable
-	switch ctx.Tipo().GetText() {
-	case "String":
-		tipo = String
-	case "Bool":
-		tipo = Bool
-	case "Character":
-		tipo = Character
-	case "Int":
-		tipo = Int
-	case "Float":
-		tipo = Float
-	}
-	expr := v.Visit(ctx.Expr(), ts, generador)
-	// Verifica tipos
-	if expr.Tipo == tipo {
-		// Si es un array Copia los valores
-		if reflect.TypeOf(expr.Valor).Kind() == reflect.Slice {
-			valores := make([]interface{}, len(expr.Valor.([]interface{})))
-			copy(valores, expr.Valor.([]interface{}))
-			ts.agregarVariable(Variable{id, tipo, valores, false})
-			return Valor{Valor: 999999999}
-		}
-		return Valor{Valor: fmt.Sprintf("Error: La expresión '%v' no es un vector\n", expr.Valor), Tipo: Error}
-	}
-	return Valor{Valor: fmt.Sprintf("Error: El tipo de la expresión '%v' no coincide con el tipo del vector '%v'\n", expr, id), Tipo: Error} */
-	return Valor{Valor: 999999999}
+	ts.agregarVariable(Variable{id, tipo, 999999999, false, 0, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn(), true, 0})
+	return Valor{}
 }
 
 func (v *Visitor) VisitAppend(ctx *parser.AppendContext, ts Scope, generador *Generador) interface{} {
 	id := ctx.ID().GetText()
-	/* 	vector := ts.encontrarVariable(id)
-	   	// Verifica que el ID sea de un vector
-	   	if reflect.TypeOf(vector.Valor).Kind() == reflect.Slice {
-	   		ts.append(id, v.Visit(ctx.Expr(), ts, generador).Valor)
-	   		return Valor{Valor: 999999999}
-	   	}
-	   	listaErrores = append(listaErrores, Error_{
-	   		Tipo:    "SEMANTICO",
-	   		Linea:   "",
-	   		Columna: "",
-	   		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
-	   	}) */
+	vector := ts.encontrarVariable(id, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()).(Variable)
+	// Verifica que el ID sea de un vector
+	if vector.enHeap {
+		expr := v.Visit(ctx.Expr(), ts, generador).(Valor)
+		generador.Comentario("Append")
+		nuevoVector := generador.nuevoTemporal()
+		salida := generador.nuevaEtiqueta()
+		ciclo := generador.nuevaEtiqueta()
+		contador := generador.nuevoTemporal()
+		tmpH := generador.nuevoTemporal()
+		tmp := generador.nuevoTemporal()
+
+		generador.Expresion(nuevoVector, "H", "", "")               //inicio en el heap del nuevo Vector
+		generador.Expresion(tmpH, fmt.Sprint(vector.Valor), "", "") //inicio en el heap del vector
+		generador.imprimirEtiqueta(ciclo)
+		generador.getHeap(tmp, tmpH)
+		generador.If(contador, "==", fmt.Sprint(vector.Tam), salida)
+		generador.Expresion(tmpH, tmpH, "+", "1")
+		generador.Expresion(contador, contador, "+", "1")
+		generador.setHeap("H", tmp)
+		generador.nextHeap()
+		generador.Goto(ciclo)
+		generador.imprimirEtiqueta(salida)
+		generador.setHeap("H", fmt.Sprint(expr.Valor))
+		generador.nextHeap()
+		generador.agregarCodigo("\n")
+		ts.modificarVector(Variable{vector.ID, vector.Tipo, nuevoVector, vector.Constante, vector.Tam, vector.Linea, vector.Columna, vector.enHeap, vector.Tam + 1}, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn())
+		return Valor{Valor: nuevoVector, Tipo: vector.Tipo}
+	}
+	listaErrores = append(listaErrores, Error_{
+		Tipo:    "SEMANTICO",
+		Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+		Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
+	})
 	return Valor{Valor: fmt.Sprintf("Error: La variable '%v' no es un Vector\n", id), Tipo: Error}
 }
 
 func (v *Visitor) VisitRemoveAt(ctx *parser.RemoveAtContext, ts Scope, generador *Generador) interface{} {
 	id := ctx.ID().GetText()
-	/* 	vector := ts.encontrarVariable(id)
-	   	indice := v.Visit(ctx.Expr(), ts, generador)
-	   	fmt.Printf("TABLA DE SIMBOLOS ANTES: %v\n", ts.Variables)
+	vector := ts.encontrarVariable(id, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()).(Variable)
+	indice := v.Visit(ctx.Expr(), ts, generador).(Valor)
 
-	   	// Verifica que el ID sea de un vector
-	   	if reflect.TypeOf(vector.Valor).Kind() == reflect.Slice {
-	   		// Verifica que el indice sea de tipo int
-	   		if indice.Tipo == Int {
-	   			// Verifica si el índice está dentro de los límites del slice
-	   			if indice.Valor.(int) >= 0 && indice.Valor.(int) < len(vector.Valor.([]interface{})) {
-	   				// Elimina el elemento creando un nuevo slice excluyendo el elemento indicado
-	   				vector.Valor = append(vector.Valor.([]interface{})[:indice.Valor.(int)], vector.Valor.([]interface{})[indice.Valor.(int)+1:]...)
-	   				ts.modificarVariable(id, vector)
-	   				fmt.Printf("TABLA DE SIMBOLOS DESPUES: %v\n", ts.Variables)
-	   				return Valor{Valor: 999999999}
-	   			}
-	   			listaErrores = append(listaErrores, Error_{
-	   				Tipo:    "SEMANTICO",
-	   				Linea:   "",
-	   				Columna: "",
-	   				Mensaje: fmt.Sprintf("El índice '%v' está fuera de los límites del vector '%v'\n", indice.Valor, id),
-	   			})
-	   			return Valor{Valor: fmt.Sprintf("Error: El índice '%v' está fuera de los límites del vector '%v'\n", indice.Valor, id), Tipo: Error}
-	   		}
-	   		listaErrores = append(listaErrores, Error_{
-	   			Tipo:    "SEMANTICO",
-	   			Linea:   "",
-	   			Columna: "",
-	   			Mensaje: fmt.Sprintf("El índice '%v' no es de tipo Int\n", indice.Valor),
-	   		})
-	   		return Valor{Valor: fmt.Sprintf("Error: El índice '%v' no es de tipo Int\n", indice.Valor), Tipo: Error}
-	   	}
-	   	listaErrores = append(listaErrores, Error_{
-	   		Tipo:    "SEMANTICO",
-	   		Linea:   "",
-	   		Columna: "",
-	   		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
-	   	}) */
-	return Valor{Valor: fmt.Sprintf("Error: La variable '%v' no es un Vector\n", id), Tipo: Error}
+	// Verifica que el ID sea de un vector
+	if vector.enHeap {
+		// Verifica que el indice sea de tipo int
+		if indice.Tipo == Int {
+			// Verifica si el índice está dentro de los límites del vector
+			generador.Comentario("Remove At")
+			tam := generador.nuevoTemporal()
+			salida := generador.nuevaEtiqueta()
+			ciclo := generador.nuevaEtiqueta()
+			Err := generador.nuevaEtiqueta()
+			NoErr := generador.nuevaEtiqueta()
+			eliminar := generador.nuevaEtiqueta()
+			contador := generador.nuevoTemporal()
+			tmpH := generador.nuevoTemporal()
+			tmp := generador.nuevoTemporal()
+			nuevoVector := generador.nuevoTemporal()
+
+			generador.Expresion(tam, fmt.Sprint(vector.Tam), "-", "1")
+			generador.If(tam, "<", fmt.Sprint(indice.Valor), Err) // Si el indice es mayor al tamaño del vector
+			generador.If(fmt.Sprint(indice.Valor), "<", "0", Err) // Si el indice es menor a 0
+			generador.Goto(NoErr)
+			generador.imprimirEtiqueta(Err)
+
+			generador.Printf("c", "", "66")  //B
+			generador.Printf("c", "", "111") //o
+			generador.Printf("c", "", "117") //u
+			generador.Printf("c", "", "110") //n
+			generador.Printf("c", "", "100") //d
+			generador.Printf("c", "", "115") //s
+			generador.Printf("c", "", "69")  //E
+			generador.Printf("c", "", "114") //r
+			generador.Printf("c", "", "114") //r
+			generador.Printf("c", "", "111") //o
+			generador.Printf("c", "", "114") //r
+			generador.Printf("c", "", "46")  //.
+			generador.Printf("c", "", "10")  //salto
+
+			generador.Expresion(nuevoVector, fmt.Sprint(vector.Valor), "", "")
+			generador.Goto(salida)
+			generador.imprimirEtiqueta(NoErr)
+			// Elimina el elemento creando un nuevo vector excluyendo el elemento indicado
+
+			generador.Expresion(nuevoVector, "H", "", "")               //inicio en el heap del nuevo Vector
+			generador.Expresion(tmpH, fmt.Sprint(vector.Valor), "", "") //inicio en el heap del vector anterior
+			generador.imprimirEtiqueta(ciclo)
+			generador.getHeap(tmp, tmpH)
+			generador.If(contador, "==", fmt.Sprint(indice.Valor), eliminar)
+			generador.If(contador, "==", fmt.Sprint(vector.Tam), salida)
+			generador.Expresion(tmpH, tmpH, "+", "1")
+			generador.Expresion(contador, contador, "+", "1")
+			generador.setHeap("H", tmp)
+			generador.nextHeap()
+			generador.Goto(ciclo)
+			generador.imprimirEtiqueta(eliminar)
+			generador.Expresion(tmpH, tmpH, "+", "1")
+			generador.Expresion(contador, contador, "+", "1")
+			generador.Goto(ciclo)
+			generador.imprimirEtiqueta(salida)
+			generador.agregarCodigo("\n")
+
+			ts.modificarVector(Variable{vector.ID, vector.Tipo, nuevoVector, vector.Constante, vector.Tam, vector.Linea, vector.Columna, vector.enHeap, vector.Tam - 1}, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn())
+			return Valor{Valor: nuevoVector, Tipo: vector.Tipo}
+		}
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+			Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+			Mensaje: fmt.Sprintf("El índice '%v' no es de tipo Int\n", indice.Valor),
+		})
+		return Valor{Valor: fmt.Sprintf("Error: El índice '%v' no es de tipo Int\n", indice.Valor), Tipo: Error}
+	}
+	listaErrores = append(listaErrores, Error_{
+		Tipo:    "SEMANTICO",
+		Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+		Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
+	})
+	return Valor{}
 }
 
 func (v *Visitor) VisitRemoveLast(ctx *parser.RemoveLastContext, ts Scope, generador *Generador) interface{} {
 	id := ctx.ID().GetText()
-	/* vector := ts.encontrarVariable(id)
+	vector := ts.encontrarVariable(id, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()).(Variable)
 
 	// Verifica que el ID sea de un vector
-	if reflect.TypeOf(vector.Valor).Kind() == reflect.Slice {
-		// Elimina el elemento creando un nuevo slice excluyendo el elemento indicado
-		if len(vector.Valor.([]interface{})) > 0 {
-			vector.Valor = vector.Valor.([]interface{})[:len(vector.Valor.([]interface{}))-1]
-			ts.modificarVariable(id, vector)
-			fmt.Printf("TABLA DE SIMBOLOS DESPUES: %v\n", ts.Variables)
-			return Valor{Valor: 999999999}
+	if vector.enHeap {
+		if vector.Tam > 0 {
+			generador.Comentario("Remove Last")
+			nuevoVector := generador.nuevoTemporal()
+			salida := generador.nuevaEtiqueta()
+			ciclo := generador.nuevaEtiqueta()
+			contador := generador.nuevoTemporal()
+			tmpH := generador.nuevoTemporal()
+			tmp := generador.nuevoTemporal()
+
+			generador.Expresion(nuevoVector, "H", "", "")               //inicio en el heap del nuevo Vector
+			generador.Expresion(tmpH, fmt.Sprint(vector.Valor), "", "") //inicio en el heap del vector
+			generador.imprimirEtiqueta(ciclo)
+			generador.getHeap(tmp, tmpH)
+			generador.If(contador, "==", fmt.Sprint(vector.Tam-1), salida)
+			generador.Expresion(tmpH, tmpH, "+", "1")
+			generador.Expresion(contador, contador, "+", "1")
+			generador.setHeap("H", tmp)
+			generador.nextHeap()
+			generador.Goto(ciclo)
+			generador.imprimirEtiqueta(salida)
+			generador.Comentario("FIN Remove Last")
+			generador.agregarCodigo("\n")
+			ts.modificarVector(Variable{vector.ID, vector.Tipo, nuevoVector, vector.Constante, vector.Tam, vector.Linea, vector.Columna, vector.enHeap, vector.Tam - 1}, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn())
+			return Valor{Valor: nuevoVector, Tipo: vector.Tipo}
 		}
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+			Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
 			Mensaje: fmt.Sprintf("El vector '%v' está vacío\n", id),
 		})
-		return Valor{Valor: fmt.Sprintf("Error: El vector '%v' está vacío\n", id), Tipo: Error}
+		return Valor{}
 	}
 	listaErrores = append(listaErrores, Error_{
 		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
+		Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+		Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
 		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
-	}) */
-	return Valor{Valor: fmt.Sprintf("Error: La variable '%v' no es un Vector\n", id), Tipo: Error}
+	})
+	return Valor{}
 }
 
 func (v *Visitor) VisitModificacion_vector(ctx *parser.Modificacion_vectorContext, ts Scope, generador *Generador) interface{} {
@@ -1876,76 +1920,116 @@ func (v *Visitor) VisitModificacion_vector(ctx *parser.Modificacion_vectorContex
 
 func (v *Visitor) VisitAccesoVector(ctx *parser.AccesoVectorContext, ts Scope, generador *Generador) interface{} {
 	id := ctx.ID().GetText()
-	/* vector := ts.encontrarVariable(id)
-	indice := v.Visit(ctx.Expr(), ts, generador)
+	vector := ts.encontrarVariable(id, ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()).(Variable)
+	indice := v.Visit(ctx.Expr(), ts, generador).(Valor)
 
 	// Verifica que el ID sea de un vector
-	if reflect.TypeOf(vector.Valor).Kind() == reflect.Slice {
+	if vector.enHeap {
 		if indice.Tipo == Int {
-			// Verifica si el índice está dentro de los límites del slice
-			if indice.Valor.(int) >= 0 && indice.Valor.(int) < len(vector.Valor.([]interface{})) {
-				// Retorna el valor del vector
-				return Valor{Valor: vector.Valor.([]interface{})[indice.Valor.(int)], Tipo: vector.Tipo}
-			}
-			listaErrores = append(listaErrores, Error_{
-				Tipo:    "SEMANTICO",
-				Linea:   "",
-				Columna: "",
-				Mensaje: fmt.Sprintf("El índice '%v' está fuera de los límites del vector '%v'\n", indice.Valor, id),
-			})
-			return Valor{Valor: "nil", Tipo: vector.Tipo}
+			// Verifica si el índice está dentro de los límites del vector
+			generador.Comentario("Acceso a Vector")
+			tam := generador.nuevoTemporal()
+			salida := generador.nuevaEtiqueta()
+			ciclo := generador.nuevaEtiqueta()
+			Err := generador.nuevaEtiqueta()
+			NoErr := generador.nuevaEtiqueta()
+			contador := generador.nuevoTemporal()
+			tmpH := generador.nuevoTemporal()
+			tmp := generador.nuevoTemporal()
+
+			generador.Expresion(tam, fmt.Sprint(vector.Tam), "-", "1")
+			generador.If(tam, "<", fmt.Sprint(indice.Valor), Err) // Si el indice es mayor al tamaño del vector
+			generador.If(fmt.Sprint(indice.Valor), "<", "0", Err) // Si el indice es menor a 0
+			generador.Goto(NoErr)
+			generador.imprimirEtiqueta(Err)
+
+			generador.Printf("c", "", "66")  //B
+			generador.Printf("c", "", "111") //o
+			generador.Printf("c", "", "117") //u
+			generador.Printf("c", "", "110") //n
+			generador.Printf("c", "", "100") //d
+			generador.Printf("c", "", "115") //s
+			generador.Printf("c", "", "69")  //E
+			generador.Printf("c", "", "114") //r
+			generador.Printf("c", "", "114") //r
+			generador.Printf("c", "", "111") //o
+			generador.Printf("c", "", "114") //r
+			generador.Printf("c", "", "46")  //.
+			generador.Printf("c", "", "32")  //espacio
+
+			generador.Expresion(tmp, "999999999", "", "") //nil
+			generador.Goto(salida)
+			generador.imprimirEtiqueta(NoErr)
+
+			// Retorna el valor del vector
+			generador.Expresion(tmpH, fmt.Sprint(vector.Valor), "", "") //inicio en el heap del vector
+			generador.imprimirEtiqueta(ciclo)
+			generador.getHeap(tmp, tmpH)
+			generador.If(contador, "==", fmt.Sprint(indice.Valor), salida)
+			generador.Expresion(tmpH, tmpH, "+", "1")
+			generador.Expresion(contador, contador, "+", "1")
+			generador.Goto(ciclo)
+			generador.imprimirEtiqueta(salida)
+			generador.agregarCodigo("\n")
+
+			return Valor{Valor: tmp, Tipo: vector.Tipo}
 		}
 		// Si no es int
 		listaErrores = append(listaErrores, Error_{
 			Tipo:    "SEMANTICO",
-			Linea:   "",
-			Columna: "",
+			Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+			Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
 			Mensaje: fmt.Sprintf("El índice '%v' no es de tipo Int\n", indice.Valor),
 		})
-		return Valor{Valor: fmt.Sprintf("Error: El índice '%v' no es de tipo Int\n", indice.Valor), Tipo: Error}
+		return Valor{}
 	}
 	listaErrores = append(listaErrores, Error_{
 		Tipo:    "SEMANTICO",
-		Linea:   "",
-		Columna: "",
+		Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+		Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
 		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
-	}) */
-	return Valor{Valor: fmt.Sprintf("Error: La variable '%v' no es un Vector\n", id), Tipo: Error}
+	})
+	return Valor{}
 }
 
 func (v *Visitor) VisitIsEmpty(ctx *parser.IsEmptyContext, ts Scope, generador *Generador) interface{} {
 	id := ctx.ID().GetText()
-	/* 	vector := ts.encontrarVariable(ctx.ID().GetText())
-	   	// Verifica que el ID sea de un vector
-	   	if reflect.TypeOf(vector.Valor).Kind() == reflect.Slice {
-	   		if len(vector.Valor.([]interface{})) == 0 {
-	   			return Valor{Valor: true, Tipo: Bool}
-	   		}
-	   		return Valor{Valor: false, Tipo: Bool}
-	   	}
-	   	listaErrores = append(listaErrores, Error_{
-	   		Tipo:    "SEMANTICO",
-	   		Linea:   "",
-	   		Columna: "",
-	   		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
-	   	}) */
-	return Valor{Valor: fmt.Sprintf("Error: La variable '%v' no es un Vector\n", id), Tipo: Error}
+	vector := ts.encontrarVariable(ctx.ID().GetText(), ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()).(Variable)
+	// Verifica que el ID sea de un vector
+	if vector.enHeap {
+		temp := generador.nuevoTemporal()
+		if vector.Tam == 0 {
+			generador.Expresion(temp, "1", "", "")
+			return Valor{Valor: temp, Tipo: Bool}
+		}
+		generador.Expresion(temp, "0", "", "")
+		return Valor{Valor: temp, Tipo: Bool}
+	}
+	listaErrores = append(listaErrores, Error_{
+		Tipo:    "SEMANTICO",
+		Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+		Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
+	})
+	return Valor{}
 }
 
 func (v *Visitor) VisitCount(ctx *parser.CountContext, ts Scope, generador *Generador) interface{} {
 	id := ctx.ID().GetText()
-	/* 	vector := ts.encontrarVariable(ctx.ID().GetText())
-	   	// Verifica que el ID sea de un vector
-	   	if reflect.TypeOf(vector.Valor).Kind() == reflect.Slice {
-	   		return Valor{Valor: len(vector.Valor.([]interface{})), Tipo: Int} // Retorna la cantidad de elementos del vector
-	   	}
-	   	listaErrores = append(listaErrores, Error_{
-	   		Tipo:    "SEMANTICO",
-	   		Linea:   "",
-	   		Columna: "",
-	   		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
-	   	}) */
-	return Valor{Valor: fmt.Sprintf("Error: La variable '%v' no es un Vector\n", id), Tipo: Error}
+	vector := ts.encontrarVariable(ctx.ID().GetText(), ctx.ID().GetSymbol().GetLine(), ctx.ID().GetSymbol().GetColumn()).(Variable)
+	// Verifica que el ID sea de un vector
+	if vector.enHeap {
+		temp := generador.nuevoTemporal()
+		generador.Expresion(temp, fmt.Sprint(vector.Tam), "", "")
+		return Valor{Valor: temp, Tipo: Int}
+	}
+	listaErrores = append(listaErrores, Error_{
+		Tipo:    "SEMANTICO",
+		Linea:   fmt.Sprint(ctx.ID().GetSymbol().GetLine()),
+		Columna: fmt.Sprint(ctx.ID().GetSymbol().GetColumn()),
+		Mensaje: fmt.Sprintf("La variable '%v' no es un Vector\n", id),
+	})
+	return Valor{}
 }
 
 func (v *Visitor) VisitOpExpr(ctx *parser.OpExprContext, ts Scope, generador *Generador) interface{} {

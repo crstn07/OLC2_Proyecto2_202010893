@@ -28,6 +28,8 @@ type Variable struct {
 	Posicion  int
 	Linea     int
 	Columna   int
+	enHeap    bool
+	Tam       int
 }
 
 type Scope struct {
@@ -223,4 +225,45 @@ func (s *Scope) agregarVariablePorReferencia(id string, variable Variable) int {
 	s.Variables[variable.ID] = variable // Agrega la variable al scope actual
 	s.Size["Size"] = s.Size["Size"] + 1 // Aumenta el tamaño del scope actual
 	return variable.Posicion
+}
+
+func (s *Scope) modificarVector(newVar Variable, linea int, columna int) int {
+	// Busca la variable en el ambito actual
+	variable, existe := s.Variables[newVar.ID]
+	// Verificar si la variables existe en el ambito actual
+	if existe {
+		if !variable.Constante {
+			if variable.Tipo == newVar.Tipo {
+				s.Variables[newVar.ID] = newVar // Edita la variable en el scope
+				return variable.Posicion
+			}
+			variable.Valor = nil
+			s.Variables[newVar.ID] = variable // Edita la variable con valor nil
+			listaErrores = append(listaErrores, Error_{
+				Tipo:    "SEMANTICO",
+				Linea:   fmt.Sprint(linea),
+				Columna: fmt.Sprint(columna),
+				Mensaje: fmt.Sprintf("El valor a asignar a la variable '%s' no es del mismo tipo, se le asignó 'nil'\n", newVar.ID),
+			})
+			return -1
+		}
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(linea),
+			Columna: fmt.Sprint(columna),
+			Mensaje: fmt.Sprintf("'%s' es una constante, no puede cambiar su valor\n", newVar.ID),
+		})
+		return -1
+	} else {
+		if s.Anterior != nil {
+			return s.Anterior.modificarVector(newVar, linea, columna)
+		}
+		listaErrores = append(listaErrores, Error_{
+			Tipo:    "SEMANTICO",
+			Linea:   fmt.Sprint(linea),
+			Columna: fmt.Sprint(columna),
+			Mensaje: fmt.Sprintf("La variable '%s' no existe\n", newVar.ID),
+		})
+		return -1
+	}
 }
